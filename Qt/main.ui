@@ -116,7 +116,7 @@
         <x>0</x>
         <y>0</y>
         <width>721</width>
-        <height>661</height>
+        <height>431</height>
        </rect>
       </property>
       <property name="sortingEnabled">
@@ -300,11 +300,11 @@
        </property>
       </widget>
      </widget>
-     <widget class="QTableView" name="tv_detail_positions">
+     <widget class="QTableView" name="tv_detail_rechnungen">
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>431</y>
+        <y>430</y>
         <width>721</width>
         <height>231</height>
        </rect>
@@ -334,7 +334,7 @@
        <bool>true</bool>
       </attribute>
      </widget>
-     <widget class="QLineEdit" name="tb_vorname">
+     <widget class="QLineEdit" name="tv_kunden_FIRST_NAME">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -367,7 +367,7 @@
        <string>Vorname</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="tb_nachname">
+     <widget class="QLineEdit" name="tv_kunden_LAST_NAME">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -418,7 +418,7 @@
        <string>Geschlecht</string>
       </property>
      </widget>
-     <widget class="QComboBox" name="cb_geschlecht">
+     <widget class="QComboBox" name="tv_kunden_GENDER">
       <property name="geometry">
        <rect>
         <x>980</x>
@@ -427,6 +427,11 @@
         <height>31</height>
        </rect>
       </property>
+      <item>
+       <property name="text">
+        <string> </string>
+       </property>
+      </item>
       <item>
        <property name="text">
         <string>m</string>
@@ -491,7 +496,7 @@
         <string>Land</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_kd_strasse">
+      <widget class="QLineEdit" name="tv_kunden_STREET">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -524,7 +529,7 @@
         <string>Straße</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_kd_hn">
+      <widget class="QLineEdit" name="tv_kunden_NUMBER">
        <property name="geometry">
         <rect>
          <x>240</x>
@@ -542,7 +547,7 @@
         <string/>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_kd_stadt">
+      <widget class="QLineEdit" name="tv_kunden_CITY">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -593,7 +598,7 @@
         <string>Stadt</string>
        </property>
       </widget>
-      <widget class="QComboBox" name="cb_kd_land">
+      <widget class="QComboBox" name="tv_kunden_COUNTRY">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -602,6 +607,11 @@
          <height>31</height>
         </rect>
        </property>
+       <item>
+        <property name="text">
+         <string> </string>
+        </property>
+       </item>
        <item>
         <property name="text">
          <string>Deutschland</string>
@@ -628,7 +638,7 @@
         </property>
        </item>
       </widget>
-      <widget class="QLineEdit" name="tb_kd_plz">
+      <widget class="QLineEdit" name="tv_kunden_PLZ">
        <property name="geometry">
         <rect>
          <x>240</x>
@@ -644,7 +654,7 @@
        </property>
       </widget>
      </widget>
-     <widget class="QLineEdit" name="tb_kdnr">
+     <widget class="QLineEdit" name="tv_kunden_CUSTID">
       <property name="geometry">
        <rect>
         <x>980</x>
@@ -691,7 +701,7 @@
         <x>0</x>
         <y>0</y>
         <width>721</width>
-        <height>661</height>
+        <height>431</height>
        </rect>
       </property>
       <property name="sortingEnabled">
@@ -701,7 +711,7 @@
        <bool>true</bool>
       </attribute>
      </widget>
-     <widget class="QLineEdit" name="tb_unternehmen">
+     <widget class="QLineEdit" name="tv_dienstleister_PROVIDER_NAME">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -738,7 +748,7 @@
       <property name="geometry">
        <rect>
         <x>740</x>
-        <y>130</y>
+        <y>140</y>
         <width>451</width>
         <height>171</height>
        </rect>
@@ -764,7 +774,7 @@
         <string>Telefonnummer</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_tel">
+      <widget class="QLineEdit" name="tv_dienstleister_TELNR">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -779,7 +789,7 @@
         </font>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_email">
+      <widget class="QLineEdit" name="tv_dienstleister_EMAIL">
        <property name="geometry">
         <rect>
          <x>230</x>
@@ -812,7 +822,7 @@
         <string>E-Mail</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_mob">
+      <widget class="QLineEdit" name="tv_dienstleister_MOBILTELNR">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -845,7 +855,7 @@
         <string>Mobiltelefonnummer</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_webseite">
+      <widget class="QLineEdit" name="tv_dienstleister_WEBSITE">
        <property name="geometry">
         <rect>
          <x>230</x>
@@ -878,7 +888,7 @@
         <string>Webseite</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_fax">
+      <widget class="QLineEdit" name="tv_dienstleister_FAXNR">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -916,7 +926,7 @@
       <property name="geometry">
        <rect>
         <x>740</x>
-        <y>310</y>
+        <y>330</y>
         <width>451</width>
         <height>171</height>
        </rect>
@@ -942,7 +952,7 @@
         <string>Land</string>
        </property>
       </widget>
-      <widget class="QComboBox" name="cb_dienst_land">
+      <widget class="QComboBox" name="tv_dienstleister_COUNTRY">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1000,7 +1010,7 @@
         <string>Straße</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_strasse">
+      <widget class="QLineEdit" name="tv_dienstleister_STREET">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1015,7 +1025,7 @@
         </font>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_stadt">
+      <widget class="QLineEdit" name="tv_dienstleister_CITY">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1048,7 +1058,7 @@
         <string>Stadt</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_hn">
+      <widget class="QLineEdit" name="tv_dienstleister_NUMBER">
        <property name="geometry">
         <rect>
          <x>230</x>
@@ -1081,7 +1091,7 @@
         <string>Hausnummer</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="tb_dienst_plz">
+      <widget class="QLineEdit" name="tv_dienstleister_PLZ">
        <property name="geometry">
         <rect>
          <x>230</x>
@@ -1115,7 +1125,7 @@
        </property>
       </widget>
      </widget>
-     <widget class="QLineEdit" name="tb_ustidnr">
+     <widget class="QLineEdit" name="tv_dienstleister_UST_IDNR">
       <property name="geometry">
        <rect>
         <x>970</x>
@@ -1148,124 +1158,12 @@
        <string>USt - IdNr.</string>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_4">
-      <property name="geometry">
-       <rect>
-        <x>740</x>
-        <y>490</y>
-        <width>451</width>
-        <height>121</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Bankverbindung</string>
-      </property>
-      <widget class="QLabel" name="lbl_iban">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>IBAN</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_iban">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_bic">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>90</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_bic">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>BIC</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_kreditinstitut">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kreditinstitut">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Kreditinstitut</string>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QLineEdit" name="tb_dienst_ceo">
+     <widget class="QLineEdit" name="tv_dienstleister_CEOS">
       <property name="geometry">
        <rect>
         <x>750</x>
         <y>100</y>
-        <width>211</width>
+        <width>431</width>
         <height>21</height>
        </rect>
       </property>
@@ -1280,7 +1178,7 @@
        <rect>
         <x>750</x>
         <y>80</y>
-        <width>211</width>
+        <width>431</width>
         <height>16</height>
        </rect>
       </property>
@@ -1290,7 +1188,23 @@
        </font>
       </property>
       <property name="text">
-       <string>Geschäftsführer</string>
+       <string>Geschäftsführer*innen</string>
+      </property>
+     </widget>
+     <widget class="QTableView" name="tv_detail_dienstleister">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>430</y>
+        <width>721</width>
+        <height>231</height>
+       </rect>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>
@@ -1332,7 +1246,7 @@
        <string>Bezeichnung</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="tb_bezeichnung">
+     <widget class="QLineEdit" name="tv_positionen_NAME">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -1365,16 +1279,6 @@
        <string>Beschreibung</string>
       </property>
      </widget>
-     <widget class="QTextBrowser" name="tb_beschreibung">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>210</y>
-        <width>431</width>
-        <height>101</height>
-       </rect>
-      </property>
-     </widget>
      <widget class="QLabel" name="lbl_flaeche">
       <property name="geometry">
        <rect>
@@ -1393,7 +1297,7 @@
        <string>Fläche</string>
       </property>
      </widget>
-     <widget class="QDoubleSpinBox" name="dsb_flaeche">
+     <widget class="QDoubleSpinBox" name="tv_positionen_AREA">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -1426,7 +1330,7 @@
        <string>Preis pro Einheit</string>
       </property>
      </widget>
-     <widget class="QDoubleSpinBox" name="dsb_ppe">
+     <widget class="QDoubleSpinBox" name="tv_positionen_UNIT_PRICE">
       <property name="geometry">
        <rect>
         <x>980</x>
@@ -1444,7 +1348,7 @@
        <string> €</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="tb_pos">
+     <widget class="QLineEdit" name="tv_positionen_POS_ID">
       <property name="geometry">
        <rect>
         <x>750</x>
@@ -1475,6 +1379,16 @@
       </property>
       <property name="text">
        <string>Positionsnummer</string>
+      </property>
+     </widget>
+     <widget class="QTextEdit" name="tv_positionen_DESCRIPTION">
+      <property name="geometry">
+       <rect>
+        <x>750</x>
+        <y>210</y>
+        <width>431</width>
+        <height>111</height>
+       </rect>
       </property>
      </widget>
     </widget>
@@ -1548,31 +1462,13 @@
      </size>
     </property>
    </widget>
-   <widget class="QLabel" name="lbl_erstellt_am">
-    <property name="geometry">
-     <rect>
-      <x>1190</x>
-      <y>60</y>
-      <width>71</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>11</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>Erstellt am</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="lbl_eintrag_erstellt_datum">
     <property name="geometry">
      <rect>
-      <x>1270</x>
-      <y>60</y>
-      <width>101</width>
-      <height>16</height>
+      <x>1200</x>
+      <y>50</y>
+      <width>171</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="font">

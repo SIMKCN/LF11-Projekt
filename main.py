@@ -1,196 +1,328 @@
-from PyQt6.QtCore import QTimer, QModelIndex, Qt
-from PyQt6.QtWidgets import QMainWindow, QApplication, QTableView, QAbstractItemView, QHeaderView, QLabel
-from PyQt6 import uic
+from PyQt6.QtCore import QModelIndex, Qt
+from PyQt6.QtWidgets import QMainWindow, QApplication, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, \
+    QComboBox, QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
+from PyQt6 import uic
 import sqlite3
 import sys
+import traceback
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi("./Qt/main.ui", self)  # UI laden
+        try:
+            uic.loadUi("./Qt/main.ui", self)  # Load UI file
+        except Exception as e:
+            self.show_error("UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
+            sys.exit(1)
 
-        # UI Initialisierung
+        # Database configuration
+        self.db_path = "rechnungsverwaltung.db"
+
+        # Mapping table views to database views
+        self.table_mapping = {
+            "tv_rechnungen": "view_invoices_full",
+            "tv_dienstleister": "view_service_provider_full",
+            "tv_kunden": "view_customers_full",
+            "tv_positionen": "view_positions_full",
+        }
+
+        # Detail table views for specific tables
+        self.detail_mapping = {
+            "tv_rechnungen": self.tv_detail_rechnungen,
+            "tv_dienstleister": self.tv_detail_dienstleister,
+        }
+
+        self.init_tables()
+
         self.w_rechnung_hinzufuegen.hide()
 
-        self.db_path = "rechnungsverwaltung.db"  # DB Pfad festlegen
+        # Connect the "Eintrag Hinzufügen (+)" button to clear and enable fields
+        btn_hinzufuegen = self.findChild(QPushButton, "btn_eintrag_hinzufuegen")
+        if btn_hinzufuegen:
+            btn_hinzufuegen.clicked.connect(self.clear_and_enable_form_fields)
 
-        self.selected_ids = {}  # Dictionary für die gespeicherten IDs
+    def init_tables(self):
+        """
+        Initializes all table views by loading data from corresponding database views.
+        """
+        for table_view_name, db_view_name in self.table_mapping.items():
+            table_view = self.findChild(QTableView, table_view_name)
+            if table_view:
+                self.load_table(table_view, db_view_name)
 
-        # Label für das Erstellungsdatum
-        self.lbl_creation_date = self.findChild(QLabel, "lbl_creation_date")
-
-        # Tabellen laden
-        self.load_table(self.tv_kunden, "view_customers_full")
-        self.load_table(self.tv_dienstleister, "view_service_provider_full")
-        self.load_table(self.tv_rechnungen, "view_invoices_full")
-        self.load_table(self.tv_positionen, "view_positions_full")
-
-    def load_table(self, table_view: QTableView, table_name: str):
+    def load_table(self, table_view: QTableView, db_view: str):
+        """
+        Loads data into a QTableView from a database view.
+        """
         try:
+            print(f"Loading data for table: {db_view}")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute(f"SELECT * FROM {table_name}")
+                cursor.execute(f"SELECT * FROM {db_view}")
                 data = cursor.fetchall()
-                columns = [desc[0] for desc in cursor.description]
-        except sqlite3.Error as e:
-            print(f"Datenbankfehler: {e}")
+                columns = [description[0] for description in cursor.description]
+        except sqlite3.OperationalError as e:
+            error_message = f"Database error while loading {db_view}: {e}"
+            print(error_message)
+            self.show_error("Database Error", error_message)
+            table_view.setModel(QStandardItemModel())  # Clear table view if error occurs
+            return
+        except Exception as e:
+            error_message = f"Unexpected error while loading {db_view}: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Unexpected Error", error_message)
+            table_view.setModel(QStandardItemModel())
             return
 
+        # Populate the table view
         try:
-            # Modell für die Tabelle erstellen
             model = QStandardItemModel()
             model.setHorizontalHeaderLabels(columns)
             for row in data:
-                row_items = [QStandardItem(str(cell)) for cell in row]
-                for item in row_items:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                model.appendRow(row_items)
+                items = [QStandardItem(str(cell)) for cell in row]
+                for item in items:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Make items read-only
+                model.appendRow(items)
 
             table_view.setModel(model)
             table_view.resizeColumnsToContents()
-            table_view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-            table_view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+            table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+            table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
             header = table_view.horizontalHeader()
             for col in range(header.count()):
-                header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
 
-            selection_model = table_view.selectionModel()
-            selection_model.currentChanged.connect(
-                lambda current, previous: self.on_current_changed(current, table_name))
+            # Connect selection change event
+            table_view.selectionModel().currentChanged.connect(
+                lambda current, previous: self.on_row_selected(current, db_view, table_view)
+            )
         except Exception as e:
-            print(f"Fehler beim Setzen der Tabelle: {e}")
+            error_message = f"Error while populating table {db_view}: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Table Population Error", error_message)
 
-    def on_current_changed(self, current: QModelIndex, table_name: str):
-        if current.isValid():
-            # ID aus der ersten Spalte der aktuellen Zeile holen
-            id_wert = current.sibling(current.row(), 0).data()
-            print(f"Ausgewählte ID für '{table_name}': {id_wert}")
-            self.selected_ids[table_name] = id_wert  # Speichere die ID im Dictionary
+    def clear_and_enable_form_fields(self):
+        """
+        Clears and enables all form fields on the current tab.
+        """
+        try:
+            # Get a list of all possible form field types
+            form_field_types = (QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit, QTextBrowser)
 
-            # Erstellungsdatum basierend auf dem Table-Namen aktualisieren
-            self.update_creation_date(table_name, id_wert)
+            # Iterate over all child widgets of the main window and process only those within the current tab
+            for field in self.findChildren(form_field_types):
+                if field.isVisible():  # Ensure the field is part of the current visible tab
+                    # Clear the field based on its type
+                    if isinstance(field, QLineEdit):
+                        field.clear()
+                    elif isinstance(field, QComboBox):
+                        field.setCurrentIndex(-1)  # Reset to no selection
+                    elif isinstance(field, QDoubleSpinBox):
+                        field.setValue(0.0)  # Reset to default value
+                    elif isinstance(field, (QTextEdit, QPlainTextEdit, QTextBrowser)):
+                        field.clear()
 
-            if table_name == "view_positions_full":
-                self.load_position_details(current)
+                    # Enable the field for editing
+                    field.setEnabled(True)
 
-            elif table_name == "view_service_provider_full":
-                self.load_service_provider_details(current, id_wert)
+            # Clear the creation date label
+            lbl_creation_date = self.findChild(QLabel, "lbl_eintrag_erstellt_datum")
+            if lbl_creation_date:
+                lbl_creation_date.setText("Erstellt am: N/A")
 
-            elif table_name == "view_customers_full":
-                self.load_customer_details(current)
+        except Exception as e:
+            error_message = f"Error while clearing and enabling form fields: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Form Reset Error", error_message)
 
-            elif table_name == "view_invoices_full":
-                self.load_positions(id_wert)
 
-    def load_position_details(self, current: QModelIndex):
+    def on_row_selected(self, current: QModelIndex, db_view: str, table_view: QTableView):
+        """
+        Handles the event when a row is selected in a table view.
+        """
+        if not current.isValid():
+            return
+
+        try:
+            row_id = current.sibling(current.row(), 0).data()
+            print(f"Selected ID from {db_view}: {row_id}")
+
+            # Update corresponding detail table view
+            if table_view.objectName() in self.detail_mapping:
+                if table_view.objectName() == "tv_rechnungen":
+                    self.load_invoice_positions(row_id)
+                elif table_view.objectName() == "tv_dienstleister":
+                    self.load_service_provider_details(row_id)
+
+            # Update textboxes and lbl_eintrag_erstellt_datum
+            self.update_form_and_label(current, table_view)
+        except Exception as e:
+            error_message = f"Error handling row selection in {db_view}: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Row Selection Error", error_message)
+
+    def update_form_and_label(self, current: QModelIndex, table_view: QTableView):
+        """
+        Updates the right-side form and lbl_eintrag_erstellt_datum with the selected row's data.
+        Dynamically identifies and updates QLineEdit, QComboBox, and QDoubleSpinBox widgets.
+        """
         model = current.model()
-        spalten_anzahl = model.columnCount()
-        werte = [current.sibling(current.row(), col).data() for col in range(spalten_anzahl)]
+        if not model:
+            return
 
-        self.tb_pos.setText(str(werte[0]))  # Bezeichnung
-        self.tb_pos.setEnabled(False)
-        self.tb_bezeichnung.setText(str(werte[1]))  # Bezeichnung
-        self.tb_bezeichnung.setEnabled(False)
-        self.tb_beschreibung.setText(str(werte[2]))  # Beschreibung
-        self.tb_beschreibung.setEnabled(False)
-        self.dsb_flaeche.setValue(float(werte[3].replace(",", ".")))  # Fläche/Menge
-        self.dsb_flaeche.setEnabled(False)
-        self.dsb_ppe.setValue(float(werte[4].replace(",", ".")))  # PPE Preis pro Einheit
-        self.dsb_ppe.setEnabled(False)
+        try:
+            for col in range(model.columnCount()):
+                column_name = model.headerData(col, Qt.Orientation.Horizontal)
+                value = current.sibling(current.row(), col).data()
+                widget = self.findChild((QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit), f"{table_view.objectName()}_{column_name}")
 
-    def load_service_provider_details(self, current: QModelIndex, id_wert):
-        model = current.model()
-        spalten_anzahl = model.columnCount()
-        werte = [current.sibling(current.row(), col).data() for col in range(spalten_anzahl)]
+                # Update QLineEdit (textbox)
+                if isinstance(widget, QLineEdit):
+                    widget.setText(str(value) if value is not None else "")
+                    widget.setEnabled(False)
 
-        self.tb_ustidnr.setText(str(werte[0]))  # USt - IdNr.
-        self.tb_ustidnr.setEnabled(False)
-        self.tb_unternehmen.setText(str(werte[1]))  # Firma
-        self.tb_unternehmen.setEnabled(False)
-        self.tb_dienst_tel.setText(str(werte[2]))  # Telefon
-        self.tb_dienst_tel.setEnabled(False)
-        self.tb_dienst_mob.setText(str(werte[3]))  # Mobiltel.nr.
-        self.tb_dienst_mob.setEnabled(False)
-        self.tb_dienst_fax.setText(str(werte[4]))  # Fax
-        self.tb_dienst_fax.setEnabled(False)
-        self.tb_dienst_email.setText(str(werte[5]))  # E-Mail
-        self.tb_dienst_email.setEnabled(False)
-        self.tb_dienst_webseite.setText(str(werte[6]))  # E-Mail
-        self.tb_dienst_webseite.setEnabled(False)
-        self.tb_dienst_strasse.setText(str(werte[7]))  # Straße
-        self.tb_dienst_strasse.setEnabled(False)
-        self.tb_dienst_hn.setText(str(werte[8]))  # Hausnr.
-        self.tb_dienst_hn.setEnabled(False)
-        self.tb_dienst_stadt.setText(str(werte[9]))  # Stadt
-        self.tb_dienst_stadt.setEnabled(False)
-        self.tb_dienst_plz.setText(str(werte[10]))  # PLZ
-        self.tb_dienst_plz.setEnabled(False)
-        self.cb_dienst_land.setCurrentText(str(werte[11]))  # Land
-        self.cb_dienst_land.setEnabled(False)
+                # Update QComboBox
+                elif isinstance(widget, QComboBox):
+                    widget.setCurrentText(str(value) if value is not None else "")
+                    widget.setEnabled(False)
 
-        # Jetzt holen wir die Geschäftsführer und Bankverbindung des Dienstleisters
-        self.load_ceo_and_bank_data(id_wert)  # UST_IDNR des Dienstleisters als Argument
+                # Update QDoubleSpinBox
+                elif isinstance(widget, QDoubleSpinBox):
+                    try:
+                        widget.setValue(float(value)) if value is not None else widget.setValue(0.0)
+                    except (ValueError, TypeError):
+                        widget.setValue(0.0)  # Set to default value if conversion fails
+                    widget.setEnabled(False)
 
-    def load_customer_details(self, current: QModelIndex):
-        model = current.model()
-        spalten_anzahl = model.columnCount()
-        werte = [current.sibling(current.row(), col).data() for col in range(spalten_anzahl)]
+                elif isinstance(widget, QTextEdit):
+                    widget.setText(value if value is not None else "")
+                    widget.setEnabled(False)
 
-        self.tb_vorname.setText(str(werte[1]))  # Vorname
-        self.tb_vorname.setEnabled(False)
-        self.tb_nachname.setText(str(werte[2]))  # Nachname
-        self.tb_nachname.setEnabled(False)
-        self.cb_geschlecht.setCurrentText(str(werte[3]))  # Geschlecht für Anrede in Rechnung
-        self.cb_geschlecht.setEnabled(False)
-        self.tb_kdnr.setText(str(werte[0]))  # Kundennummer
-        self.tb_kdnr.setEnabled(False)
-        self.tb_kd_strasse.setText(str(werte[4]))  # Straße
-        self.tb_kd_strasse.setEnabled(False)
-        self.tb_kd_hn.setText(str(werte[5]))  # Hausnummer
-        self.tb_kd_hn.setEnabled(False)
-        self.tb_kd_plz.setText(str(werte[6]))  # PLZ
-        self.tb_kd_plz.setEnabled(False)
-        self.tb_kd_stadt.setText(str(werte[7]))  # Stadt
-        self.tb_kd_stadt.setEnabled(False)
-        self.cb_kd_land.setCurrentText(str(werte[8]))  # Land
-        self.cb_kd_land.setEnabled(False)
+            # Update the lbl_eintrag_erstellt_datum
+            eintrag_datum = None
+            for col in range(model.columnCount()):
+                header = model.headerData(col, Qt.Orientation.Horizontal)
+                if header == "CREATION_DATE":
+                    eintrag_datum = current.sibling(current.row(), col).data()
+                    break
 
-    def load_positions(self, invoice_id):
-        # Hier Positionen für die ausgewählte Rechnung laden
+            lbl_creation_date = self.findChild(QLabel, "lbl_eintrag_erstellt_datum")
+            if lbl_creation_date:
+                lbl_creation_date.setText(f"Erstellt am: {eintrag_datum}" if eintrag_datum else "Erstellt am: N/A")
+
+                # List all referenced CEOs for the selected service provider
+                if table_view.objectName() == "tv_dienstleister":
+                    service_provider_id = current.sibling(current.row(),
+                                                          0).data()  # Assuming the first column contains the ID
+                    ceo_line_edit = self.findChild(QLineEdit, "tv_dienstleister_CEOS")
+                    if ceo_line_edit:
+                        ceo_names = self.get_ceos_for_service_provider(service_provider_id)
+                        ceo_line_edit.setText(", ".join(ceo_names))
+                        ceo_line_edit.setEnabled(False)
+        except Exception as e:
+            error_message = f"Error updating form and label: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Form Update Error", error_message)
+
+    def get_ceos_for_service_provider(self, service_provider_id: str):
+        """
+        Retrieves the names of all CEOs associated with a given service provider.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT p.POS_ID, p.NAME, p.DESCRIPTION, p.AREA, p.UNIT_PRICE, p.CREATION_DATE
+                    SELECT CEO_NAME
+                    FROM REF_LABOR_COST AS rlc
+                    JOIN CEO AS ceo ON rlc.FK_ST_NR = ceo.ST_NR
+                    WHERE rlc.FK_UST_IDNR = ?
+                """, (service_provider_id,))
+                ceo_names = [row[0] for row in cursor.fetchall()]
+            return ceo_names
+        except sqlite3.OperationalError as e:
+            error_message = f"Database error while retrieving CEOs for service provider ID {service_provider_id}: {e}"
+            print(error_message)
+            self.show_error("Database Error", error_message)
+            return []
+        except Exception as e:
+            error_message = f"Unexpected error while retrieving CEOs for service provider ID {service_provider_id}: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Unexpected Error", error_message)
+            return []
+
+    def load_service_provider_details(self, service_provider_id: str):
+        """
+        Loads CEO and bank details for a selected service provider.
+        """
+        try:
+            print(f"Loading service provider details for ID: {service_provider_id}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT CEO_NAME, IBAN, BANK_NAME, BIC
+                    FROM ceo_bank_view
+                    WHERE UST_IDNR = ?
+                """, (service_provider_id,))
+                data = cursor.fetchall()
+
+            model = QStandardItemModel()
+            model.setHorizontalHeaderLabels(["CEO Name", "IBAN", "Kreditinstitut", "BIC"])
+            for row in data:
+                items = [QStandardItem(str(cell)) for cell in row]
+                model.appendRow(items)
+
+            self.tv_detail_dienstleister.setModel(model)
+        except sqlite3.OperationalError as e:
+            error_message = f"Database error while loading CEO and bank data: {e}"
+            print(error_message)
+            self.show_error("Database Error", error_message)
+        except Exception as e:
+            error_message = f"Unexpected error while loading CEO and bank data: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Unexpected Error", error_message)
+
+    def load_invoice_positions(self, invoice_id: str):
+        """
+        Loads positions for a selected invoice.
+        """
+        try:
+            print(f"Loading invoice positions for ID: {invoice_id}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT p.POS_ID, p.NAME, p.DESCRIPTION, p.AREA, p.UNIT_PRICE
                     FROM POSITIONS AS p
                     JOIN INVOICES AS i ON p.FK_INVOICE_NR = i.INVOICE_NR
                     WHERE i.INVOICE_NR = ?
                 """, (invoice_id,))
-                daten = cursor.fetchall()
-                spalten = [desc[0] for desc in cursor.description]
-        except sqlite3.Error as e:
-            print(f"Datenbankfehler beim Laden der Positionen: {e}")
-            return
+                data = cursor.fetchall()
 
-        model = QStandardItemModel()
-        model.setHorizontalHeaderLabels(spalten)
-        for zeile in daten:
-            row_items = []
-            for wert in zeile:
-                item = QStandardItem(str(wert))
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # Zelle nicht bearbeitbar
-                row_items.append(item)
-            model.appendRow(row_items)
+            model = QStandardItemModel()
+            model.setHorizontalHeaderLabels(["Position ID", "Name", "Description", "Area", "Unit Price"])
+            for row in data:
+                items = [QStandardItem(str(cell)) for cell in row]
+                model.appendRow(items)
 
-        self.tv_positionen.setModel(model)
+            self.tv_detail_rechnungen.setModel(model)
+        except sqlite3.OperationalError as e:
+            error_message = f"Database error while loading invoice positions: {e}"
+            print(error_message)
+            self.show_error("Database Error", error_message)
+        except Exception as e:
+            error_message = f"Unexpected error while loading invoice positions: {e}\n{traceback.format_exc()}"
+            print(error_message)
+            self.show_error("Unexpected Error", error_message)
 
-    def update_creation_date(self, table_name: str, id_value: str):
-        # Die Logik zur Aktualisierung des Erstellungsdatums basierend auf dem Tabellennamen
-        pass
+    def show_error(self, title: str, message: str):
+        """
+        Displays an error message in a QMessageBox.
+        """
+        QMessageBox.critical(self, title, message)
 
-# Hauptprogramm
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()

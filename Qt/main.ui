@@ -116,7 +116,7 @@
         <x>0</x>
         <y>0</y>
         <width>721</width>
-        <height>661</height>
+        <height>431</height>
        </rect>
       </property>
       <property name="sortingEnabled">
@@ -300,11 +300,11 @@
        </property>
       </widget>
      </widget>
-     <widget class="QTableView" name="tv_detail_positions">
+     <widget class="QTableView" name="tv_detail_rechnungen">
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>431</y>
+        <y>430</y>
         <width>721</width>
         <height>231</height>
        </rect>
@@ -691,7 +691,7 @@
         <x>0</x>
         <y>0</y>
         <width>721</width>
-        <height>661</height>
+        <height>431</height>
        </rect>
       </property>
       <property name="sortingEnabled">
@@ -738,7 +738,7 @@
       <property name="geometry">
        <rect>
         <x>740</x>
-        <y>130</y>
+        <y>140</y>
         <width>451</width>
         <height>171</height>
        </rect>
@@ -916,7 +916,7 @@
       <property name="geometry">
        <rect>
         <x>740</x>
-        <y>310</y>
+        <y>330</y>
         <width>451</width>
         <height>171</height>
        </rect>
@@ -1148,124 +1148,12 @@
        <string>USt - IdNr.</string>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_4">
-      <property name="geometry">
-       <rect>
-        <x>740</x>
-        <y>490</y>
-        <width>451</width>
-        <height>121</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Bankverbindung</string>
-      </property>
-      <widget class="QLabel" name="lbl_iban">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>IBAN</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_iban">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_bic">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>90</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_bic">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>BIC</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_kreditinstitut">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kreditinstitut">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Kreditinstitut</string>
-       </property>
-      </widget>
-     </widget>
      <widget class="QLineEdit" name="tb_dienst_ceo">
       <property name="geometry">
        <rect>
         <x>750</x>
         <y>100</y>
-        <width>211</width>
+        <width>431</width>
         <height>21</height>
        </rect>
       </property>
@@ -1280,7 +1168,7 @@
        <rect>
         <x>750</x>
         <y>80</y>
-        <width>211</width>
+        <width>431</width>
         <height>16</height>
        </rect>
       </property>
@@ -1290,7 +1178,23 @@
        </font>
       </property>
       <property name="text">
-       <string>Geschäftsführer</string>
+       <string>Geschäftsführer*innen</string>
+      </property>
+     </widget>
+     <widget class="QTableView" name="tv_detail_dienstleister">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>430</y>
+        <width>721</width>
+        <height>231</height>
+       </rect>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>

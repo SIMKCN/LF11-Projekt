@@ -16,3 +16,6 @@ Erstellung einer Rechungserstellungssoftware
 - [ ] Einträge löschen können
 - [ ] Einträge durchsuchen können
 - [ ] In Rechnungsnummerfeld nur Zahlen erlauben, kein Text
+- [ ] Dienstleister Form um Bankverbindung ergänzen
+- [ ] Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
+- [ ] autom. Width von Details Pages realisieren

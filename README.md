@@ -15,3 +15,4 @@ Erstellung einer Rechungserstellungssoftware
     - [ ] Positionen
 - [ ] Einträge löschen können
 - [ ] Einträge durchsuchen können
+- [ ] In Rechnungsnummerfeld nur Zahlen erlauben, kein Text

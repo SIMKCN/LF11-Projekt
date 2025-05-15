@@ -41,8 +41,9 @@ Erstellung einer Rechungserstellungssoftware
     - [ ]    Auswahl von Dienstleister + anlegen Button
     - [ ]    Auswahl von Kunden + anlegen Button
     - [ ]    Auswahl von mehreren Positionen + Bulk anlegen Button
-- [ ]     12.    Rechnungen als PDF exportieren mit Druckvorschau
-- [ ]     13.    PDF-Vorschau für bestehende Rechnungen
+- [ ]     12.    Form Validation Rules erfassen und umsetzen
+- [ ]     13.    Rechnungen als PDF exportieren mit Druckvorschau
+- [ ]     14.    PDF-Vorschau für bestehende Rechnungen
 
 
 

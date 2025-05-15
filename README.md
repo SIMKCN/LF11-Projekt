@@ -2,20 +2,48 @@
 
 Erstellung einer Rechungserstellungssoftware
 
+##### Table of Contents  
+- [Priorisierung](#priorisierung)
+- [Todo](#todo)
+
+## Priorisierung
+| **Priorität** | **User Story (Als ... möchte ich ... damit ...)**                                                                                                | **Akzeptanzkriterien**                                    |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| 🥇 Hoch        | Als Benutzer möchte ich Kunden anlegen, bearbeiten und löschen können, damit ich Stammdaten verwalten kann.                                      | CRUD-Funktionalität für Kunden, Eingabevalidierung        |
+| 🥇 Hoch        | Als Benutzer möchte ich Dienstleister anlegen, bearbeiten und löschen können, damit ich diese in Rechnungen verwenden kann.                      | CRUD-Funktionalität für Dienstleister                     |
+| 🥇 Hoch        | Als Benutzer möchte ich Rechnungen erstellen können, damit ich Dienstleistungen abrechnen kann.                                                  | Eingabe von Beträgen, Auswahl Kunde/Dienstleister         |
+| 🥇 Hoch        | Als Benutzer möchte ich eine Druckvorschau sehen, bevor ich eine Rechnung drucke.                                                                | Vorschau sichtbar vor Druck, keine direkte Druckauslösung |
+| 🥈 Mittel      | Als Benutzer möchte ich Rechnungen drucken können, damit ich sie in Papierform weitergeben kann.                                                 | Rechnungen werden korrekt gedruckt                        |
+| 🥈 Mittel      | Als Benutzer möchte ich Rechnungen in PDF und/oder XML wandeln können, damit ich sie per PDF/XML weitergeben kann.                               | Rechnungen werden korrekt als PDF/XML umgewandelt         |
+| 🥈 Mittel      | Als Benutzer möchte ich Rechnungen archivieren können, damit ich diese später wiederfinden kann. Diese sollen zur Sicherheit verschlüsselt sein. | Archiv als ZIP mit PDF + XML, verschlüsselt               |
+| 🥈 Mittel      | Als Benutzer möchte ich in Registerkarten zwischen Kunden, Dienstleistern und Rechnungen wechseln können, damit ich den Überblick behalte.       | Funktionierende GUI-Tabs mit Navigation                   |
+| 🥈 Mittel      | Als Benutzer möchte ich sehen, welcher Kunde zu welchem Dienstleister gehört, um die Beziehungen zu verstehen.                                   | Zuordnung sichtbar in GUI                                 |
+| 🥉 Niedrig     | Als Product Owner möchte ich UML-Diagramme zur Softwarestruktur erhalten, damit ich die Architektur nachvollziehen kann.                         | Vorhandensein von folgenden Diagrammen:                   |
+| 🥉 Niedrig     | Als Entwickler möchte ich während des Entwicklungsprozesses Testdaten in der Datenbank, um schneller testen zu können.                           | Automatisiertes Einfügen von Beispieldaten                |
+
+
 ## Todo
 
-- [ ] PDF Ansicht für bestehende Rechnungen im Fenster
+- [ ]    1.    GUI auf full-width/height
+- [ ]    2.    In Zahlenfeldern nur Zahlen bei Eingabe erlauben
+- [ ]    3.    autom. Width von Details Pages realisieren
+- [ ]    4.    Posiotionen anlegen
+- [ ]    5.    Positionen löschen
+- [ ]    6.    Dienstleister anlegen
+    - [ ]    Form um Bankverbindung ergänzen
+- [ ]    7.    Diensteister löschen
+    - [ ] Bankverbindungen anlegen
+- [ ]    8.    Kunden anlegen
+- [ ]    9.    Kunden löschen
+- [ ]    10.    Einträge durchsuchen
+    - [ ]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
+- [ ]    11.    Rechnungen erstellen
+    - [ ]    Auswahl von Dienstleister + anlegen Button
+    - [ ]    Auswahl von Kunden + anlegen Button
+    - [ ]    Auswahl von mehreren Positionen + Bulk anlegen Button
+- [ ]     12.    Rechnungen als PDF exportieren mit Druckvorschau
+- [ ]     13.    PDF-Vorschau für bestehende Rechnungen
 
-- [x] Erstellungsdatum für Rechnungen automatisch auf aktuellen Tag stellen? Nicht im Jahr 2000 anfangen
-- [ ] Einträge hinzufügen können
-    - [ ] Rechnungen
-    - [ ] Dienstleister
-    - [ ] Adressen
-    - [ ] Geschäftsführer
-    - [ ] Positionen
-- [ ] Einträge löschen können
-- [ ] Einträge durchsuchen können
-- [ ] In Rechnungsnummerfeld nur Zahlen erlauben, kein Text
-- [ ] Dienstleister Form um Bankverbindung ergänzen
-- [ ] Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
-- [ ] autom. Width von Details Pages realisieren
+
+
+

@@ -46,6 +46,14 @@ Erstellung einer Rechungserstellungssoftware
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
 - [ ]     15.    PDF-Vorschau für bestehende Rechnungen
 
-
-
+### DONE
+- [x]    GUI erstellen
+- [x]    Datenbanktyp auswählen und DB erstellen
+- [x]    Datenmodell (folgend DM genannt) pflegen
+- [x]    Dummy-Daten einfügen
+- [x]    Views anlegen
+- [x]    Rechnungen, Dienstleister, Kunden und Positionen anzeigen
+- [x]    jeweiliges Form mit Daten des ausgewählten Eintrages füllen
+- [x]    Erstellungsdatum des ausgewählten Eintrages anzeigen
+- [x]    Detail-Pages für Rechnungen (Positionen) und Dienstleister (Geschäftsführer) realisieren
 

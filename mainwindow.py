@@ -8,6 +8,8 @@ from PyQt6 import uic
 from datetime import date
 import sys
 
+from unicodedata import decimal
+
 from config import UI_PATH
 from utils import show_error, format_exception
 from database import fetch_all
@@ -37,7 +39,7 @@ class MainWindow(QMainWindow):
         }
 
         self.init_tables()
-        #self.w_rechnung_hinzufuegen.setVisible(False)
+        self.w_rechnung_hinzufuegen.setVisible(False)
         self.de_erstellungsdatum.setDate(date.today())
         self.showMaximized()
 
@@ -159,16 +161,16 @@ class MainWindow(QMainWindow):
                     widget.setText(str(value) if value is not None else "")
                     widget.setEnabled(False)
                 elif isinstance(widget, QComboBox):
-                    widget.setCurrentText(str(value) if value is not None else "")
+                    widget.setCurrentText(str(value) if value is not None else "0,01")
                     widget.setEnabled(False)
                 elif isinstance(widget, QDoubleSpinBox):
                     try:
-                        widget.setValue(float(value)) if value is not None else widget.setValue(0.0)
+                        widget.setValue(float(value.replace(",", ".")) if value is not None else widget.setValue(0))
                     except (ValueError, TypeError):
-                        widget.setValue(0.0)
+                        widget.setValue(0)
                     widget.setEnabled(False)
                 elif isinstance(widget, QTextEdit):
-                    widget.setText(value if value is not None else "")
+                    widget.setText(value if value is not None else "0,04")
                     widget.setEnabled(False)
 
             eintrag_datum = None

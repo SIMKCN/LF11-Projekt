@@ -25,7 +25,7 @@ Erstellung einer Rechungserstellungssoftware
 ## Todo
 
 
-- [ ]    2.    In Zahlenfeldern nur Zahlen bei Eingabe erlauben
+
 - [ ]    3.    autom. Width von Details Pages realisieren
 - [ ]    4.    Positionen anlegen
 - [ ]    5.    Positionen löschen
@@ -59,4 +59,5 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    Aufteilung Code-Elemente 16.05.2025
 - [x]    GUI auf full-width/height 16.05.2025
 - [x]    GUI Responsive machen 16.05.2025
-
+- [ ]    In Zahlenfeldern nur Zahlen bei Eingabe erlauben (zurückgestellt) 16.05.2025
+- [x]    Automatisch PK-Felder mit nächsten kleinsten Value setzen + Logik PK Generierung 16.05.2025

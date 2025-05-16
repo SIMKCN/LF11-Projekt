@@ -111,7 +111,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Hinzufüegen</string>
+           <string>Neu</string>
           </property>
           <property name="icon">
            <iconset>
@@ -192,7 +192,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">

@@ -1,4 +1,5 @@
 # This file contains the MainWindow class for the application
+import sqlite3
 
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton
@@ -7,10 +8,8 @@ from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6 import uic
 from datetime import date
 import sys
-
-from unicodedata import decimal
-
-from config import UI_PATH
+from database import get_next_primary_key
+from config import UI_PATH, DB_PATH
 from utils import show_error, format_exception
 from database import fetch_all
 from logic import get_ceos_for_service_provider, get_service_provider_ceos_and_bank, get_invoice_positions
@@ -36,6 +35,14 @@ class MainWindow(QMainWindow):
         self.detail_mapping = {
             "tv_rechnungen": self.tv_detail_rechnungen,
             "tv_dienstleister": self.tv_detail_dienstleister,
+        }
+
+        # Mapping for PK column
+        self.pk_field_config = {
+            "tab_rechnungen": {"field": "tb_rechnungsnummer", "table": "INVOICES", "pk_col": "INVOICE_NR", "type": "invoice"},
+            "tab_kunden": {"field": "tv_kunden_CUSTID", "table": "CUSTOMERS", "pk_col": "CUSTID", "type": "customer"},
+            "tab_dienstleister": {"field": "tv_dienstleister_UST_IDNR", "table": "SERVICE_PROVIDER", "pk_col": "UST_IDNR", "type": "service_provider"},
+            "tab_positionen": {"field": "tv_positionen_POS_ID", "table": "POSITIONS", "pk_col": "POS_ID", "type": "positions"}
         }
 
         self.init_tables()
@@ -99,10 +106,8 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Table Population Error", error_message)
 
+
     def clear_and_enable_form_fields(self):
-        """
-        Clears and enables all form fields on the current tab.
-        """
         try:
             form_field_types = (QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit, QTextBrowser)
             for field in self.findChildren(form_field_types):
@@ -119,6 +124,20 @@ class MainWindow(QMainWindow):
             lbl_creation_date = self.findChild(QLabel, "lbl_eintrag_erstellt_datum")
             if lbl_creation_date:
                 lbl_creation_date.setText("Erstellt am: N/A")
+
+            # automatically set next free PK-Value
+            current_tab = self.tabWidget.currentWidget().objectName()
+            pk_conf = self.pk_field_config.get(current_tab)
+            if pk_conf:
+                pk_field_widget = self.findChild(QLineEdit, pk_conf["field"])
+                if pk_field_widget:
+                    next_pk = get_next_primary_key(self,
+                        table_name=pk_conf["table"],
+                        pk_column=pk_conf["pk_col"],
+                        pk_type=pk_conf["type"]
+                    )
+                    pk_field_widget.setText(str(next_pk))
+
         except Exception as e:
             error_message = f"Error while clearing and enabling form fields: {format_exception(e)}"
             print(error_message)

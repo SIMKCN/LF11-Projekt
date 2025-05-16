@@ -55,5 +55,6 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    Rechnungen, Dienstleister, Kunden und Positionen anzeigen
 - [x]    jeweiliges Form mit Daten des ausgewählten Eintrages füllen
 - [x]    Erstellungsdatum des ausgewählten Eintrages anzeigen
-- [x]    Detail-Pages für Rechnungen (Positionen) und Dienstleister (Geschäftsführer) realisieren
+- [x]    Detail-Pages für Rechnungen (Positionen) und Dienstleister (Geschäftsführer) realisieren 
+- [x]    Aufteilung Code-Elemente 16.05.2025
 

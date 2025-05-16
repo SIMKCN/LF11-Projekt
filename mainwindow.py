@@ -37,8 +37,9 @@ class MainWindow(QMainWindow):
         }
 
         self.init_tables()
-        self.w_rechnung_hinzufuegen.hide()
+        #self.w_rechnung_hinzufuegen.setVisible(False)
         self.de_erstellungsdatum.setDate(date.today())
+        self.showMaximized()
 
         btn_hinzufuegen = self.findChild(QPushButton, "btn_eintrag_hinzufuegen")
         if btn_hinzufuegen:

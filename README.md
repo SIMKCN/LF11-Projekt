@@ -24,10 +24,10 @@ Erstellung einer Rechungserstellungssoftware
 
 ## Todo
 
-- [ ]    1.    GUI auf full-width/height
-- [ ]    2.    In Zahlenfeldern nur Zahlen bei Eingabe erlauben
+
+
 - [ ]    3.    autom. Width von Details Pages realisieren
-- [ ]    4.    Posiotionen anlegen
+- [ ]    4.    Positionen anlegen
 - [ ]    5.    Positionen löschen
 - [ ]    6.    Dienstleister anlegen
     - [ ]    Form um Bankverbindung ergänzen
@@ -59,5 +59,9 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    Rechnungen, Dienstleister, Kunden und Positionen anzeigen
 - [x]    jeweiliges Form mit Daten des ausgewählten Eintrages füllen
 - [x]    Erstellungsdatum des ausgewählten Eintrages anzeigen
-- [x]    Detail-Pages für Rechnungen (Positionen) und Dienstleister (Geschäftsführer) realisieren
-
+- [x]    Detail-Pages für Rechnungen (Positionen) und Dienstleister (Geschäftsführer) realisieren 
+- [x]    Aufteilung Code-Elemente 16.05.2025
+- [x]    GUI auf full-width/height 16.05.2025
+- [x]    GUI Responsive machen 16.05.2025
+- [ ]    In Zahlenfeldern nur Zahlen bei Eingabe erlauben (zurückgestellt) 16.05.2025
+- [x]    Automatisch PK-Felder mit nächsten kleinsten Value setzen + Logik PK Generierung 16.05.2025

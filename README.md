@@ -45,6 +45,10 @@ Erstellung einer Rechungserstellungssoftware
 - [ ]     13.    LOGO upload umsetzen
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
 - [ ]     15.    PDF-Vorschau für bestehende Rechnungen
+### Neu
+- [ ] 15.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio
+- [ ] 16. Sprachmischung vermeinden - keine englischen Begriffe verwenden, alles auf Deutsch umstellen
+- [ ] 17. Bei Rechnungen -> Positionstabelle unten -> Eintragsnummer ganz links entfernen (ist sinnlos)
 
 ### DONE
 - [x]    GUI erstellen

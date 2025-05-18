@@ -4,6 +4,8 @@ import sqlite3
 from config import DB_PATH
 from utils import show_error
 
+MAX_INVOICE_CUSTOMER_ID = 100000
+MAX_SERVICE_PROVIDER_ID = 1000000000
 
 def get_connection():
     """
@@ -38,7 +40,7 @@ def get_next_primary_key(self, table_name, pk_column, pk_type):
                     used_numbers.add(num)
                 except Exception:
                     continue
-            for candidate in range(1, 100000):
+            for candidate in range(1, MAX_INVOICE_CUSTOMER_ID):
                 if candidate not in used_numbers:
                     return f"{candidate:05d}"
             return "99999"  # fallback
@@ -52,7 +54,7 @@ def get_next_primary_key(self, table_name, pk_column, pk_type):
                         used_numbers.add(num)
                     except Exception:
                         continue
-            for candidate in range(1, 1000000000):
+            for candidate in range(1, MAX_SERVICE_PROVIDER_ID):
                 if candidate not in used_numbers:
                     return f"DE{candidate:09d}"
             return "DE999999999"  # fallback

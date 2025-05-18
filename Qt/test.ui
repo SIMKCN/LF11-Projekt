@@ -192,7 +192,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -202,10 +202,24 @@
           <item>
            <layout class="QVBoxLayout" name="layoutRechnungenTables">
             <item>
-             <widget class="QTableView" name="tv_rechnungen"/>
+             <widget class="QTableView" name="tv_rechnungen">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
             <item>
-             <widget class="QTableView" name="tv_detail_rechnungen"/>
+             <widget class="QTableView" name="tv_detail_rechnungen">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -428,7 +442,14 @@
          </attribute>
          <layout class="QHBoxLayout" name="layoutTabKundenMain">
           <item>
-           <widget class="QTableView" name="tv_kunden"/>
+           <widget class="QTableView" name="tv_kunden">
+            <property name="editTriggers">
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QVBoxLayout" name="kundenFormColumn">
@@ -718,10 +739,24 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout">
             <item>
-             <widget class="QTableView" name="tv_dienstleister"/>
+             <widget class="QTableView" name="tv_dienstleister">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
             <item>
-             <widget class="QTableView" name="tv_detail_dienstleister"/>
+             <widget class="QTableView" name="tv_detail_dienstleister">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -1153,7 +1188,14 @@
          </attribute>
          <layout class="QHBoxLayout" name="layoutTabPositionenMain">
           <item>
-           <widget class="QTableView" name="tv_positionen"/>
+           <widget class="QTableView" name="tv_positionen">
+            <property name="editTriggers">
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QVBoxLayout" name="positionenFormColumn">

@@ -2,7 +2,7 @@
 import sqlite3
 
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
-    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton
+    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6 import uic
@@ -10,9 +10,10 @@ from datetime import date
 import sys
 from database import get_next_primary_key
 from config import UI_PATH, DB_PATH
-from utils import show_error, format_exception
+from utils import show_error, format_exception, show_info
 from database import fetch_all
-from logic import get_ceos_for_service_provider, get_service_provider_ceos_and_bank, get_invoice_positions
+from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -44,6 +45,18 @@ class MainWindow(QMainWindow):
             "tab_dienstleister": {"field": "tv_dienstleister_UST_IDNR", "table": "SERVICE_PROVIDER", "pk_col": "UST_IDNR", "type": "service_provider"},
             "tab_positionen": {"field": "tv_positionen_POS_ID", "table": "POSITIONS", "pk_col": "POS_ID", "type": "positions"}
         }
+
+        # Mapping for Search Label
+        self.tab_search_label_text = {
+            "tab_rechnungen": "Rechnungen durchsuchen",
+            "tab_dienstleister": "Dienstleister durchsuchen",
+            "tab_kunden": "Kunden durchsuchen",
+            "tab_positionen": "Positionen durchsuchen"
+        }
+        # Connect Signal for Tab Change
+        self.tabWidget.currentChanged.connect(self.on_tab_changed)
+        # set correct on start
+        self.on_tab_changed(self.tabWidget.currentIndex())
 
         self.init_tables()
         self.w_rechnung_hinzufuegen.setVisible(False)
@@ -206,7 +219,7 @@ class MainWindow(QMainWindow):
                     service_provider_id = current.sibling(current.row(), 0).data()
                     ceo_line_edit = self.findChild(QLineEdit, "tv_dienstleister_CEOS")
                     if ceo_line_edit:
-                        ceo_names = get_ceos_for_service_provider(service_provider_id)
+                        ceo_names = get_ceos_for_service_provider_form(service_provider_id)
                         ceo_line_edit.setText(", ".join(ceo_names))
                         ceo_line_edit.setEnabled(False)
         except Exception as e:
@@ -219,11 +232,11 @@ class MainWindow(QMainWindow):
         Loads CEO details for a selected service provider.
         """
         try:
-            data = get_service_provider_ceos_and_bank(service_provider_id)
+            data = get_service_provider_ceos(service_provider_id)
             model = QStandardItemModel()
-            model.setHorizontalHeaderLabels(["CEO Name"])
-            for ceo_name in data:
-                items = [QStandardItem(str(ceo_name))]
+            model.setHorizontalHeaderLabels(["ST_NR", "CEO Name"])
+            for row in data:
+                items = [QStandardItem(str(cell)) for cell in row]
                 model.appendRow(items)
             self.tv_detail_dienstleister.setModel(model)
         except Exception as e:
@@ -268,3 +281,15 @@ class MainWindow(QMainWindow):
             error_message = f"Error while clearing enabled fields: {format_exception(e)}"
             print(error_message)
             show_error(self, "Field Clearing Error", error_message)
+
+    def on_tab_changed(self, index):
+        try:
+            current_tab = self.tabWidget.widget(index)
+            if current_tab is not None:
+                tab_obj_name = current_tab.objectName()
+                label_value = self.tab_search_label_text.get(tab_obj_name, "")
+                lbl = self.findChild(QLabel, "lbl_search_for")
+                if lbl:
+                    lbl.setText(label_value)
+        except Exception as e:
+            print(f"Fehler beim Setzen des Suchlabels: {e}")

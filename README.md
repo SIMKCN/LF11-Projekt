@@ -26,7 +26,7 @@ Erstellung einer Rechungserstellungssoftware
 
 
 
-- [ ]    3.    autom. Width von Details Pages realisieren
+- [ ]    3.    autom. Width von Details Pages realisieren (zurückgestellt)
 - [ ]    4.    Positionen anlegen
 - [ ]    5.    Positionen löschen
 - [ ]    6.    Dienstleister anlegen
@@ -36,7 +36,7 @@ Erstellung einer Rechungserstellungssoftware
 - [ ]    8.    Kunden anlegen
 - [ ]    9.    Kunden löschen
 - [ ]    10.    Einträge durchsuchen
-    - [ ]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
+    - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
 - [ ]    11.    Rechnungen erstellen
     - [ ]    Auswahl von Dienstleister + anlegen Button
     - [ ]    Auswahl von Kunden + anlegen Button
@@ -61,3 +61,4 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    GUI Responsive machen 16.05.2025
 - [ ]    In Zahlenfeldern nur Zahlen bei Eingabe erlauben (zurückgestellt) 16.05.2025
 - [x]    Automatisch PK-Felder mit nächsten kleinsten Value setzen + Logik PK Generierung 16.05.2025
+- [x]    Alle QTableViews non editable machen

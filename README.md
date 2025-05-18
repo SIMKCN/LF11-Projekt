@@ -27,20 +27,18 @@ Erstellung einer Rechungserstellungssoftware
 
 
 - [ ]    3.    autom. Width von Details Pages realisieren (zurückgestellt)
-- [ ]    4.    Positionen anlegen
 - [ ]    5.    Positionen löschen
 - [ ]    6.    Dienstleister anlegen
-    - [ ]    Form um Bankverbindung ergänzen
+  - [x]    Form um Bankverbindung ergänzen 18.05.2025
+  - [ ] Bankverbindungen anlegen
 - [ ]    7.    Diensteister löschen
-    - [ ] Bankverbindungen anlegen
-- [ ]    8.    Kunden anlegen
 - [ ]    9.    Kunden löschen
 - [ ]    10.    Einträge durchsuchen
-    - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab)
+    - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab) 18.05.2025
 - [ ]    11.    Rechnungen erstellen
     - [ ]    Auswahl von Dienstleister + anlegen Button
     - [ ]    Auswahl von Kunden + anlegen Button
-    - [ ]    Auswahl von mehreren Positionen + Bulk anlegen Button
+    - [x]    Auswahl von mehreren Positionen + Bulk anlegen Button 18.05.2025
 - [ ]     12.    Form Validation Rules erfassen und umsetzen
 - [ ]     13.    LOGO upload umsetzen
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
@@ -61,4 +59,7 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    GUI Responsive machen 16.05.2025
 - [ ]    In Zahlenfeldern nur Zahlen bei Eingabe erlauben (zurückgestellt) 16.05.2025
 - [x]    Automatisch PK-Felder mit nächsten kleinsten Value setzen + Logik PK Generierung 16.05.2025
-- [x]    Alle QTableViews non editable machen
+- [x]    Alle QTableViews non editable machen 18.05.2025
+- [x]    Positionen anlegen 18.05.2025
+- [x]    Kunden anlegen 18.05.2025
+- [x]    Rechnungen anlegen 18.05.2025

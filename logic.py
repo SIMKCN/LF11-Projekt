@@ -2,7 +2,7 @@
 
 from database import fetch_all
 
-def get_ceos_for_service_provider(service_provider_id):
+def get_ceos_for_service_provider_form(service_provider_id):
     """
     Returns a list of CEO names for a given service provider.
     """
@@ -15,19 +15,19 @@ def get_ceos_for_service_provider(service_provider_id):
     data, _ = fetch_all(query, (service_provider_id,))
     return [row[0] for row in data]
 
-def get_service_provider_ceos_and_bank(service_provider_id):
+def get_service_provider_ceos(service_provider_id):
     """
     Returns CEO names for a given service provider.
     """
     query = """
-        SELECT CEO.CEO_NAME
+        SELECT CEO.ST_NR, CEO.CEO_NAME
         FROM CEO
         INNER JOIN REF_LABOR_COST ON CEO.ST_NR = REF_LABOR_COST.FK_ST_NR
         INNER JOIN SERVICE_PROVIDER ON REF_LABOR_COST.FK_UST_IDNR = SERVICE_PROVIDER.UST_IDNR
         WHERE SERVICE_PROVIDER.UST_IDNR = ?
     """
     data, _ = fetch_all(query, (service_provider_id,))
-    return [row[0] for row in data]
+    return data
 
 def get_invoice_positions(invoice_id):
     """

@@ -43,7 +43,13 @@ Erstellung einer Rechungserstellungssoftware
 - [ ]     13.    LOGO upload umsetzen
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
 - [ ]     15.    PDF-Vorschau für bestehende Rechnungen
-
+- [ ] 16.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio
+- [ ] 17. Sprachmischung vermeinden - keine englischen Begriffe verwenden, alles auf Deutsch umstellen
+- [ ] 18. Styling verbessern
+    - [ ] Padding obere und linke Seite erhöhen (3-4px ?)
+    - [ ] Bei Rechnungen -> Positionstabelle unten -> Eintragsnummer ganz links entfernen (ist sinnlos)
+    - [ ] In den Tabellen -> wichtige Spalten weiter vorne anzeigen (optional wenn genug Zeit ist)
+    - [ ] Warum ist neben der Suchleiste eine Anzeige für das Erstellungsdatum?
 ### DONE
 - [x]    GUI erstellen
 - [x]    Datenbanktyp auswählen und DB erstellen

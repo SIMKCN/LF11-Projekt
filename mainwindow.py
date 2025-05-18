@@ -421,15 +421,27 @@ class MainWindow(QMainWindow):
 
                 if current_tab == "tab_rechnungen":
                     # Rechnung speichern
+                    if "customer" in rel_data:
+                        main_data["FK_CUSTID"] = rel_data["customer"].get("fk_custid",
+                                                                          None) or self.get_selected_kunde_id()
+                    else:
+                        main_data["FK_CUSTID"] = self.get_selected_kunde_id()
+                        # FK_UST_IDNR
+                    if "service_provider" in rel_data:
+                        main_data["FK_UST_IDNR"] = rel_data["service_provider"].get("fk_ust_idnr",
+                                                                                    None) or self.get_selected_dienstleister_id()
+                    else:
+                        main_data["FK_UST_IDNR"] = self.get_selected_dienstleister_id()
                     cur.execute(
-                        "INSERT INTO INVOICES (INVOICE_NR, CREATION_DATE, FK_CUSTID, FK_UST_IDNR, LABOR_COST, VAT_RATE_LABOR) VALUES (?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO INVOICES (INVOICE_NR, CREATION_DATE, FK_CUSTID, FK_UST_IDNR, LABOR_COST, VAT_RATE_LABOR, VAT_RATE_POSITIONS) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (
                             main_data["tb_rechnungsnummer"],
                             main_data["de_erstellungsdatum"],
                             main_data["FK_CUSTID"],
                             main_data["FK_UST_IDNR"],
                             main_data["dsb_lohnkosten"],
-                            main_data["dsb_mwst_lohnkosten"]
+                            main_data["dsb_mwst_lohnkosten"],
+                            main_data["dsb_mwst_positionen"]
                         )
                     )
                     # Positionen speichern

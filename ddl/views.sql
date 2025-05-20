@@ -2,16 +2,16 @@
 DROP VIEW IF EXISTS view_customers_full;
 CREATE VIEW view_customers_full AS
 SELECT
-    c.CUSTID,  -- Kundennummer
-    c.CREATION_DATE,  -- Erstellungsdatum
-    c.FIRST_NAME,  -- Vorname
-    c.LAST_NAME,  -- Nachname
-    c.GENDER,  -- Geschlecht
-    a.STREET,  -- Straße
-    a.NUMBER,  -- Hausnummer
-    a.PLZ,  -- PLZ
-    a.CITY,  -- Stadt
-    a.COUNTRY  -- Land
+    c.CUSTID AS Kundennummer,  -- Kundennummer
+    c.CREATION_DATE AS Erstellungsdatum,  -- Erstellungsdatum
+    c.FIRST_NAME AS Vorname,  -- Vorname
+    c.LAST_NAME AS Nachname,  -- Nachname
+    c.GENDER AS Geschlecht,  -- Geschlecht
+    a.STREET AS Strasse,  -- Straße
+    a.NUMBER AS Hausnummer,  -- Hausnummer
+    a.ZIP AS PLZ,  -- PLZ
+    a.CITY AS Stadt,  -- Stadt
+    a.COUNTRY AS Land  -- Land
 FROM CUSTOMERS c
 JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID;
 
@@ -19,22 +19,22 @@ JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID;
 DROP VIEW IF EXISTS view_service_provider_full;
 CREATE VIEW view_service_provider_full AS
 SELECT
-    sp.UST_IDNR,  -- USt-IDNr.
-    sp.CREATION_DATE,  -- Erstellungsdatum
-    sp.PROVIDER_NAME,  -- Firmenname
-    sp.TELNR,  -- Telefonnummer
-    sp.MOBILTELNR,  -- Mobiltelefonnummer
-    sp.FAXNR,  -- Faxnummer
-    sp.EMAIL,  -- E-Mail
-    sp.WEBSITE,  -- Website
-    a.STREET,  -- Straße
-    a.NUMBER,  -- Hausnummer
-    a.PLZ,  -- PLZ
-    a.CITY,  -- Stadt
-    a.COUNTRY,  -- Land
-    l.FILE_NAME,  -- Logo-Dateiname
-    acc.IBAN,  -- IBAN
-    b.BANK_NAME  -- Bankname
+    sp.UST_IDNR AS UStIdNr,  -- USt-IDNr.
+    sp.CREATION_DATE AS Erstellungsdatum,  -- Erstellungsdatum
+    sp.PROVIDER_NAME AS Unternehmensname,  -- Firmenname
+    sp.EMAIL AS Email,  -- E-Mail
+    sp.WEBSITE AS Webseite,  -- Website
+    a.STREET AS Strasse,  -- Straße
+    a.NUMBER AS Hausnummer,  -- Hausnummer
+    a.ZIP AS PLZ,  -- PLZ
+    a.CITY AS Stadt,  -- Stadt
+    a.COUNTRY AS Land,  -- Land
+    sp.TELNR AS Telefonnummer,  -- Telefonnummer
+    sp.MOBILTELNR AS Mobiltelefonnummer,  -- Mobiltelefonnummer
+    sp.FAXNR AS Faxnummer,  -- Faxnummer
+    acc.IBAN AS IBAN,  -- IBAN
+    b.BIC AS BIC, --BIC
+    b.BANK_NAME AS Kreditinstitut  -- Bankname
 FROM SERVICE_PROVIDER sp
 JOIN ADDRESSES a ON sp.FK_ADDRESS_ID = a.ID
 JOIN LOGOS l ON sp.FK_LOGO_ID = l.ID
@@ -45,13 +45,13 @@ LEFT JOIN BANK b ON acc.FK_BANK_ID = b.BIC;
 DROP VIEW IF EXISTS view_invoices_full;
 CREATE VIEW view_invoices_full AS
 SELECT
-    i.INVOICE_NR,
-    i.CREATION_DATE,
-    i.LABOR_COST,
-    i.VAT_RATE_LABOR,
-    i.VAT_RATE_POSITIONS,
-    sp.PROVIDER_NAME,
-    c.FIRST_NAME || ' ' || c.LAST_NAME AS Kunde
+    i.INVOICE_NR AS Rechnungsnummer,
+    i.CREATION_DATE AS Erstellungsdatum,
+    c.FIRST_NAME || ' ' || c.LAST_NAME AS Kunde,
+    sp.PROVIDER_NAME AS Unternehmensname,
+    i.LABOR_COST AS Lohnkosten,
+    i.VAT_RATE_LABOR AS MwSt_Lohn,
+    i.VAT_RATE_POSITIONS AS MwSt_Positionen
 FROM
     INVOICES i
 JOIN
@@ -63,12 +63,15 @@ JOIN
 DROP VIEW IF EXISTS view_positions_full;
 CREATE VIEW view_positions_full AS
 SELECT
-    p.POS_ID,  -- Positions-ID
-    p.CREATION_DATE,  -- Erstellungsdatum
-    p.NAME,  -- Positionsname
-    p.DESCRIPTION,  -- Beschreibung
-    p.AREA,  -- Fläche/Menge
-    p.UNIT_PRICE,  -- Preis pro Einheit
-    i.INVOICE_NR  -- Rechnungsnummer
-FROM POSITIONS p
-JOIN INVOICES i ON p.FK_INVOICE_NR = i.INVOICE_NR;
+    p.POS_ID AS PositionsID,                      -- Positions-ID
+    p.CREATION_DATE AS "Erstellungsdatum Position",               -- Erstellungsdatum Position
+    p.NAME AS Bezeichnung,                        -- Positionsname
+    p.DESCRIPTION AS Beschreibung,                 -- Beschreibung
+    p.UNIT_PRICE AS Einzelpreis,                  -- Preis pro Einheit
+    p.AREA AS Flaeche,                        -- Fläche/Menge
+    i.INVOICE_NR AS Rechnungsnummer,                  -- Rechnungsnummer
+    i.CREATION_DATE AS "Erstellungsdatum Rechnung" -- Erstellungsdatum Rechnung
+FROM
+    INVOICES i
+    JOIN REF_INVOICES_POSITIONS ref ON ref.FK_INVOICES_INVOICE_NR = i.INVOICE_NR
+    JOIN POSITIONS p ON p.POS_ID = ref.FK_POSITIONS_POS_ID;

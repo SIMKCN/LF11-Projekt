@@ -27,12 +27,6 @@ Erstellung einer Rechungserstellungssoftware
 
 
 - [ ]    3.    autom. Width von Details Pages realisieren (zurückgestellt)
-- [ ]    5.    Positionen löschen
-- [ ]    6.    Dienstleister anlegen
-  - [x]    Form um Bankverbindung ergänzen 18.05.2025
-  - [ ] Bankverbindungen anlegen
-- [ ]    7.    Diensteister löschen
-- [ ]    9.    Kunden löschen
 - [ ]    10.    Einträge durchsuchen
     - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab) 18.05.2025
 - [ ]    11.    Rechnungen erstellen
@@ -69,3 +63,9 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    Positionen anlegen 18.05.2025
 - [x]    Kunden anlegen 18.05.2025
 - [x]    Rechnungen anlegen 18.05.2025
+- [x]    Positionen löschen 20.05.2025
+- [x]    Dienstleister anlegen 20.05.2025
+  - [x]    Form um Bankverbindung ergänzen 18.05.2025
+  - [x] Bankverbindungen  20.05.2025
+- [x]    Diensteister löschen 20.05.2025
+- [x]    Kunden löschen 20.05.2025

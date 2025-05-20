@@ -192,7 +192,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>3</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -479,7 +479,7 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="tv_kunden_FIRST_NAME">
+               <widget class="QLineEdit" name="tv_kunden_Vorname">
                 <property name="minimumSize">
                  <size>
                   <width>110</width>
@@ -502,7 +502,7 @@
                </widget>
               </item>
               <item row="0" column="3">
-               <widget class="QLineEdit" name="tv_kunden_LAST_NAME">
+               <widget class="QLineEdit" name="tv_kunden_Nachname">
                 <property name="minimumSize">
                  <size>
                   <width>110</width>
@@ -525,7 +525,7 @@
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="tv_kunden_CUSTID">
+               <widget class="QLineEdit" name="tv_kunden_Kundennummer">
                 <property name="minimumSize">
                  <size>
                   <width>110</width>
@@ -548,7 +548,7 @@
                </widget>
               </item>
               <item row="1" column="3">
-               <widget class="QComboBox" name="tv_kunden_GENDER">
+               <widget class="QComboBox" name="tv_kunden_Geschlecht">
                 <item>
                  <property name="text">
                   <string/>
@@ -591,7 +591,7 @@
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="tv_kunden_STREET">
+                  <widget class="QLineEdit" name="tv_kunden_Strasse">
                    <property name="minimumSize">
                     <size>
                      <width>100</width>
@@ -614,7 +614,7 @@
                   </widget>
                  </item>
                  <item row="0" column="3">
-                  <widget class="QLineEdit" name="tv_kunden_NUMBER">
+                  <widget class="QLineEdit" name="tv_kunden_Hausnummer">
                    <property name="minimumSize">
                     <size>
                      <width>60</width>
@@ -637,7 +637,7 @@
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="tv_kunden_CITY">
+                  <widget class="QLineEdit" name="tv_kunden_Stadt">
                    <property name="minimumSize">
                     <size>
                      <width>100</width>
@@ -683,7 +683,7 @@
                   </widget>
                  </item>
                  <item row="2" column="1" colspan="3">
-                  <widget class="QComboBox" name="tv_kunden_COUNTRY">
+                  <widget class="QComboBox" name="tv_kunden_Land">
                    <item>
                     <property name="text">
                      <string/>
@@ -798,7 +798,7 @@
                </widget>
               </item>
               <item row="1" column="3">
-               <widget class="QLineEdit" name="tv_dienstleister_UST_IDNR">
+               <widget class="QLineEdit" name="tv_dienstleister_UStIdNr">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -834,7 +834,7 @@
                   </widget>
                  </item>
                  <item row="0" column="2">
-                  <widget class="QLineEdit" name="tv_dienstleister_STREET">
+                  <widget class="QLineEdit" name="tv_dienstleister_Strasse">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -870,7 +870,7 @@
                   </widget>
                  </item>
                  <item row="2" column="2">
-                  <widget class="QComboBox" name="tv_dienstleister_COUNTRY">
+                  <widget class="QComboBox" name="tv_dienstleister_Land">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
@@ -905,7 +905,7 @@
                   </widget>
                  </item>
                  <item row="0" column="4">
-                  <widget class="QLineEdit" name="tv_dienstleister_NUMBER">
+                  <widget class="QLineEdit" name="tv_dienstleister_Hausnummer">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -921,7 +921,7 @@
                   </widget>
                  </item>
                  <item row="1" column="2">
-                  <widget class="QLineEdit" name="tv_dienstleister_CITY">
+                  <widget class="QLineEdit" name="tv_dienstleister_Stadt">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
@@ -976,7 +976,7 @@
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_TELNR">
+                  <widget class="QLineEdit" name="tv_dienstleister_Telefonnummer">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -999,7 +999,7 @@
                   </widget>
                  </item>
                  <item row="0" column="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_EMAIL">
+                  <widget class="QLineEdit" name="tv_dienstleister_Email">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -1022,7 +1022,7 @@
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_MOBILTELNR">
+                  <widget class="QLineEdit" name="tv_dienstleister_Mobiltelefonnummer">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -1045,7 +1045,7 @@
                   </widget>
                  </item>
                  <item row="1" column="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_WEBSITE">
+                  <widget class="QLineEdit" name="tv_dienstleister_Webseite">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -1068,7 +1068,7 @@
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_FAXNR">
+                  <widget class="QLineEdit" name="tv_dienstleister_Faxnummer">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -1088,7 +1088,7 @@
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="tv_dienstleister_PROVIDER_NAME">
+               <widget class="QLineEdit" name="tv_dienstleister_Unternehmensname">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -1158,7 +1158,7 @@
                   </widget>
                  </item>
                  <item row="1" column="2" colspan="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_BANK_NAME">
+                  <widget class="QLineEdit" name="tv_dienstleister_Kreditinstitut">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
@@ -1212,7 +1212,7 @@
             <item>
              <layout class="QGridLayout" name="gridPositionenForm">
               <item row="3" column="1" colspan="3">
-               <widget class="QTextEdit" name="tv_positionen_DESCRIPTION">
+               <widget class="QTextEdit" name="tv_positionen_Beschreibung">
                 <property name="minimumSize">
                  <size>
                   <width>300</width>
@@ -1235,7 +1235,7 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="tv_positionen_POS_ID">
+               <widget class="QLineEdit" name="tv_positionen_PositionsID">
                 <property name="minimumSize">
                  <size>
                   <width>120</width>
@@ -1245,7 +1245,7 @@
                </widget>
               </item>
               <item row="1" column="1" colspan="3">
-               <widget class="QLineEdit" name="tv_positionen_NAME">
+               <widget class="QLineEdit" name="tv_positionen_Bezeichnung">
                 <property name="minimumSize">
                  <size>
                   <width>120</width>
@@ -1255,7 +1255,7 @@
                </widget>
               </item>
               <item row="5" column="3">
-               <widget class="QDoubleSpinBox" name="tv_positionen_UNIT_PRICE">
+               <widget class="QDoubleSpinBox" name="tv_positionen_Einzelpreis">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1313,7 +1313,7 @@
                </widget>
               </item>
               <item row="5" column="1">
-               <widget class="QDoubleSpinBox" name="tv_positionen_AREA">
+               <widget class="QDoubleSpinBox" name="tv_positionen_Flaeche">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>

@@ -37,8 +37,7 @@ Erstellung einer Rechungserstellungssoftware
 - [ ]     13.    LOGO upload umsetzen
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
 - [ ]     15.    PDF-Vorschau für bestehende Rechnungen
-- [ ] 16.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio
-- [ ] 17. Sprachmischung vermeinden - keine englischen Begriffe verwenden, alles auf Deutsch umstellen
+- [ ] 16.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio 
 - [ ] 18. Styling verbessern
     - [ ] Padding obere und linke Seite erhöhen (3-4px ?)
     - [ ] Bei Rechnungen -> Positionstabelle unten -> Eintragsnummer ganz links entfernen (ist sinnlos)
@@ -69,3 +68,4 @@ Erstellung einer Rechungserstellungssoftware
   - [x] Bankverbindungen  20.05.2025
 - [x]    Diensteister löschen 20.05.2025
 - [x]    Kunden löschen 20.05.2025
+- [x] 17. Sprachmischung vermeinden - keine englischen Begriffe verwenden, alles auf Deutsch umstellen

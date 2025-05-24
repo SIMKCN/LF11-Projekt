@@ -36,7 +36,7 @@ class FileUploader(QWidget):
 
     def browse_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, "Logo auswählen")
-        if files:main
+        if files:
             self.selected_files = files
             self.fileListWidget.clear()
             self.fileListWidget.addItems(files)

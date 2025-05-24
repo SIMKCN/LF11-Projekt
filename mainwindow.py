@@ -2,7 +2,7 @@
 import sqlite3
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
-    QDialog, QFormLayout, QListWidget, QFileDialog
+    QDialog, QFormLayout, QListWidget, QFileDialog, QVBoxLayout
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
@@ -236,6 +236,32 @@ class MainWindow(QMainWindow):
             self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
         self.tabWidget.currentChanged.connect(self.update_export_button_state)
         self.update_export_button_state(self.tabWidget.currentIndex())
+
+        # Debounce-Timer für jedes Suchfeld
+        self.search_timer_kunden = QTimer(self)
+        self.search_timer_kunden.setSingleShot(True)
+        self.search_timer_kunden.timeout.connect(self.search_kunden)
+
+        self.search_timer_dienstleister = QTimer(self)
+        self.search_timer_dienstleister.setSingleShot(True)
+        self.search_timer_dienstleister.timeout.connect(self.search_dienstleister)
+
+        self.search_timer_positionen = QTimer(self)
+        self.search_timer_positionen.setSingleShot(True)
+        self.search_timer_positionen.timeout.connect(self.search_positionen)
+
+        # QLineEdit-Suchfelder holen
+        self.le_search_kunden = self.findChild(QLineEdit, "tb_search_kunden")
+        self.le_search_dienstleister = self.findChild(QLineEdit, "tb_search_dienstleister")
+        self.le_search_positionen = self.findChild(QLineEdit, "tb_search_positionen")
+
+        # Signal-Slot-Verbindungen für Debounce-Suche
+        if self.le_search_kunden:
+            self.le_search_kunden.textChanged.connect(self.on_search_kunden_text_changed)
+        if self.le_search_dienstleister:
+            self.le_search_dienstleister.textChanged.connect(self.on_search_dienstleister_text_changed)
+        if self.le_search_positionen:
+            self.le_search_positionen.textChanged.connect(self.on_search_positionen_text_changed)
 
 
     def open_logo_picker(self):
@@ -536,55 +562,39 @@ class MainWindow(QMainWindow):
                         )
                     )
 
-                    # Positionen ANLEGEN und die Zuordnung in REF_INVOICES_POSITIONS herstellen!
-                    for pos in self.temp_positionen:
-                        cur.execute("SELECT COALESCE(MAX(POS_ID), 0) + 1 FROM POSITIONS")
-                        next_pos_id = cur.fetchone()[0]
-                        cur.execute(
-                            "INSERT INTO POSITIONS (POS_ID, CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?, ?)",
-                            (
-                                next_pos_id,
-                                main_data["de_erstellungsdatum"],
-                                pos.get("DESCRIPTION", ""),
-                                pos.get("AREA", 0),
-                                pos.get("UNIT_PRICE", 0),
-                                pos.get("NAME", ""),
+                    # Nur die im TableView ausgewählten Positionen behandeln!
+                    selected_indexes = self.tv_rechnungen_form_positionen.selectionModel().selectedRows()
+                    for idx in selected_indexes:
+                        pos_id = idx.sibling(idx.row(), 0).data()
+                        if str(pos_id).startswith("NEU-"):
+                            # Temporäre Position: speichern und verknüpfen
+                            temp_index = int(str(pos_id).split("-")[1]) - 1
+                            pos = self.temp_positionen[temp_index]
+                            cur.execute(
+                                "INSERT INTO POSITIONS (CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?)",
+                                (
+                                    main_data["de_erstellungsdatum"],
+                                    pos.get("DESCRIPTION", ""),
+                                    pos.get("AREA", 0),
+                                    pos.get("UNIT_PRICE", 0),
+                                    pos.get("NAME", ""),
+                                )
                             )
-                        )
-                        # Die m:n-Zuordnung speichern:
-                        cur.execute(
-                            "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                            (next_pos_id, main_data["tb_rechnungsnummer"])
-                        )
+                            new_pos_id = cur.lastrowid
+                            cur.execute(
+                                "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
+                                (new_pos_id, main_data["tb_rechnungsnummer"])
+                            )
+                        else:
+                            # Bestehende Position: nur verknüpfen
+                            cur.execute(
+                                "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
+                                (int(pos_id), main_data["tb_rechnungsnummer"])
+                            )
 
-                        selected_indexes = self.tv_rechnungen_form_positionen.selectionModel().selectedRows()
-                        for idx in selected_indexes:
-                            pos_id = idx.sibling(idx.row(), 0).data()
-                            if str(pos_id).startswith("NEU-"):
-                                # Temporäre Position: erst speichern, dann verknüpfen
-                                temp_index = int(str(pos_id).split("-")[1]) - 1
-                                pos = self.temp_positionen[temp_index]
-                                cur.execute(
-                                    "INSERT INTO POSITIONS (CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?)",
-                                    (
-                                        main_data["de_erstellungsdatum"],
-                                        pos.get("DESCRIPTION", ""),
-                                        pos.get("AREA", 0),
-                                        pos.get("UNIT_PRICE", 0),
-                                        pos.get("NAME", ""),
-                                    )
-                                )
-                                new_pos_id = cur.lastrowid
-                                cur.execute(
-                                    "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                                    (new_pos_id, main_data["tb_rechnungsnummer"])
-                                )
-                            else:
-                                # Bestehende Position: nur verknüpfen
-                                cur.execute(
-                                    "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                                    (int(pos_id), main_data["tb_rechnungsnummer"])
-                                )
+                    # Nach dem Speichern temp_positionen leeren!
+                    self.temp_positionen = []
+                    self.load_all_and_temp_positions_for_rechnungsformular()
 
                 elif current_tab == "tab_kunden":
                     # Adresse speichern und FK holen
@@ -1008,28 +1018,36 @@ class MainWindow(QMainWindow):
 
     def load_all_and_temp_positions_for_rechnungsformular(self):
         """
-        Lädt alle bestehenden Positionen aus der DB und fügt die noch nicht gespeicherten (temporären)
-        Positionen aus self.temp_positionen hinzu. Zeigt alles im TableView 'tv_rechnungen_form_positionen' an.
+        Zeigt im TableView 'tv_rechnungen_form_positionen':
+        - Wenn Suchfeld leer: temp-array oben, dann alle DB-Positionen
+        - Wenn Suchfeld nicht leer: nur gefilterte DB-Positionen (temp-array ignorieren)
         """
         try:
-            # 1. Bestehende Positionen laden
-            data, columns = fetch_all("SELECT POS_ID, NAME, DESCRIPTION, UNIT_PRICE, AREA FROM POSITIONS")
+            le_search_positionen = self.findChild(QLineEdit, "tb_search_positionen")
+            search_text = le_search_positionen.text().strip() if le_search_positionen else ""
 
-            # 2. Temporäre Positionen ergänzen (ohne POS_ID oder mit Platzhalter)
-            temp_rows = []
-            for idx, pos in enumerate(self.temp_positionen):
-                temp_rows.append([
-                    f"NEU-{idx + 1}",  # Platzhalter für neue POS_ID
-                    pos.get("NAME", ""),
-                    pos.get("DESCRIPTION", ""),
-                    pos.get("UNIT_PRICE", ""),
-                    pos.get("AREA", ""),
-                ])
+            if search_text:
+                # Nur DB durchsuchen, temp-array ignorieren
+                _, columns = fetch_all(f"SELECT * FROM view_positions_full LIMIT 1")
+                like_clauses = [f'"{col}" LIKE ?' for col in columns]
+                sql = f'SELECT * FROM view_positions_full WHERE ' + " OR ".join(like_clauses)
+                params = [f'%{search_text}%'] * len(columns)
+                data, _ = fetch_all(sql, tuple(params))
+                all_rows = list(data)
+            else:
+                # temp-array oben, dann alle DB-Positionen
+                data, columns = fetch_all("SELECT POS_ID, NAME, DESCRIPTION, UNIT_PRICE, AREA FROM POSITIONS")
+                temp_rows = []
+                for idx, pos in enumerate(self.temp_positionen):
+                    temp_rows.append([
+                        f"NEU-{idx + 1}",
+                        pos.get("NAME", ""),
+                        pos.get("DESCRIPTION", ""),
+                        pos.get("UNIT_PRICE", ""),
+                        pos.get("AREA", ""),
+                    ])
+                all_rows = temp_rows + list(data)
 
-            # 3. Kombinieren
-            all_rows = list(data) + temp_rows
-
-            # 4. Anzeigen im Model
             model = QStandardItemModel()
             model.setHorizontalHeaderLabels(["PositionsID", "Bezeichnung", "Beschreibung", "Einzelpreis", "Flaeche"])
             for row in all_rows:
@@ -1191,3 +1209,76 @@ class MainWindow(QMainWindow):
         except Exception as e:
             show_error(self, "Export-Fehler", str(e))
             return None
+
+    def on_search_kunden_text_changed(self, text):
+        self.search_timer_kunden.stop()
+        self.search_timer_kunden.start(DEBOUNCE_TIME)
+
+    def search_kunden(self):
+        self._search_in_table(
+            search_lineedit_name="tb_search_kunden",
+            table_view_name="tv_rechnungen_form_kunde",
+            db_view_name="view_customers_full"
+        )
+
+    def on_search_dienstleister_text_changed(self, text):
+        self.search_timer_dienstleister.stop()
+        self.search_timer_dienstleister.start(DEBOUNCE_TIME)
+
+    def search_dienstleister(self):
+        self._search_in_table(
+            search_lineedit_name="tb_search_dienstleister",
+            table_view_name="tv_rechnungen_form_dienstleister",
+            db_view_name="view_service_provider_full"
+        )
+
+    def on_search_positionen_text_changed(self, text):
+        self.search_timer_positionen.stop()
+        self.search_timer_positionen.start(DEBOUNCE_TIME)
+
+    def search_positionen(self):
+        """
+        Sucht in Haupt-Tabelle (tv_positionen) und aktualisiert auch das Rechnungsformular-TableView.
+        """
+        # Haupt-TableView (tv_positionen): nur DB, wie gehabt
+        self._search_in_table(
+            search_lineedit_name="tb_search_positionen",
+            table_view_name="tv_positionen",
+            db_view_name="view_positions_full"
+        )
+        # Rechnungsformular-TableView (tv_rechnungen_form_positionen): immer auch aktualisieren!
+        self.load_all_and_temp_positions_for_rechnungsformular()
+
+    def _search_in_table(self, search_lineedit_name, table_view_name, db_view_name):
+        search_box = self.findChild(QLineEdit, search_lineedit_name)
+        if not search_box:
+            return
+        search_text = search_box.text().strip()
+        table_view = self.findChild(QTableView, table_view_name)
+        if not table_view:
+            return
+
+        if not search_text:
+            self.load_table(table_view, db_view_name)
+            return
+
+        try:
+            _, columns = fetch_all(f"SELECT * FROM {db_view_name} LIMIT 1")
+            like_clauses = [f'"{col}" LIKE ?' for col in columns]
+            sql = f'SELECT * FROM {db_view_name} WHERE ' + " OR ".join(like_clauses)
+            params = [f'%{search_text}%'] * len(columns)
+            data, _ = fetch_all(sql, tuple(params))
+
+            model = QStandardItemModel()
+            model.setHorizontalHeaderLabels(columns)
+            for row in data:
+                items = [QStandardItem(str(cell)) for cell in row]
+                for item in items:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                model.appendRow(items)
+            table_view.setModel(model)
+            table_view.resizeColumnsToContents()
+            table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+            table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        except Exception as e:
+            show_error(self, "Suchfehler", str(e))

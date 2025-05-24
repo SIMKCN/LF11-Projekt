@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1400</width>
-    <height>800</height>
+    <height>803</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,9 +72,6 @@
       </item>
       <item>
        <spacer name="horizontalSpacerSearchRight">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
         <property name="sizeHint" stdset="0">
          <size>
           <width>40</width>
@@ -91,9 +88,6 @@
        <layout class="QVBoxLayout" name="buttonColumnLayout">
         <item>
          <spacer name="buttonColSpacer">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
           <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
@@ -192,7 +186,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -204,7 +198,7 @@
             <item>
              <widget class="QTableView" name="tv_rechnungen">
               <property name="editTriggers">
-               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               <set>QAbstractItemView::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -214,7 +208,7 @@
             <item>
              <widget class="QTableView" name="tv_detail_rechnungen">
               <property name="editTriggers">
-               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               <set>QAbstractItemView::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -454,7 +448,7 @@
           <item>
            <widget class="QTableView" name="tv_kunden">
             <property name="editTriggers">
-             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+             <set>QAbstractItemView::NoEditTriggers</set>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>
@@ -723,11 +717,8 @@
             </item>
             <item>
              <spacer name="kundenFormSpacer">
-              <property name="orientation">
-               <enum>Qt::Orientation::Vertical</enum>
-              </property>
               <property name="sizeType">
-               <enum>QSizePolicy::Policy::Fixed</enum>
+               <enum>QSizePolicy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -751,7 +742,7 @@
             <item>
              <widget class="QTableView" name="tv_dienstleister">
               <property name="editTriggers">
-               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               <set>QAbstractItemView::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -761,7 +752,7 @@
             <item>
              <widget class="QTableView" name="tv_detail_dienstleister">
               <property name="editTriggers">
-               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               <set>QAbstractItemView::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -1173,12 +1164,29 @@
              </layout>
             </item>
             <item>
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Orientation::Vertical</enum>
+             <widget class="QGroupBox" name="groupBox_5">
+              <property name="title">
+               <string>Weitere Informationen</string>
               </property>
+              <widget class="QPushButton" name="btn_logo_upload">
+               <property name="geometry">
+                <rect>
+                 <x>10</x>
+                 <y>30</y>
+                 <width>161</width>
+                 <height>24</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Firmenlogo hochladen</string>
+               </property>
+              </widget>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer">
               <property name="sizeType">
-               <enum>QSizePolicy::Policy::Fixed</enum>
+               <enum>QSizePolicy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -1200,7 +1208,7 @@
           <item>
            <widget class="QTableView" name="tv_positionen">
             <property name="editTriggers">
-             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+             <set>QAbstractItemView::NoEditTriggers</set>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>
@@ -1354,11 +1362,8 @@
             </item>
             <item>
              <spacer name="positionenFormSpacer">
-              <property name="orientation">
-               <enum>Qt::Orientation::Vertical</enum>
-              </property>
               <property name="sizeType">
-               <enum>QSizePolicy::Policy::Fixed</enum>
+               <enum>QSizePolicy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>

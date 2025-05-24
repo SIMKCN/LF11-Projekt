@@ -1164,32 +1164,6 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_4">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>510</y>
-        <width>431</width>
-        <height>121</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Weitere Informationen</string>
-      </property>
-      <widget class="QPushButton" name="pushButton">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>111</width>
-         <height>24</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Logo hochladen</string>
-       </property>
-      </widget>
-     </widget>
     </widget>
     <widget class="QWidget" name="tab_positionen">
      <attribute name="title">
@@ -1449,6 +1423,9 @@
      </item>
      <item row="2" column="2">
       <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
        <property name="sizeHint" stdset="0">
         <size>
          <width>40</width>
@@ -1568,6 +1545,9 @@
      </item>
      <item row="0" column="1">
       <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
        <property name="sizeType">
         <enum>QSizePolicy::Fixed</enum>
        </property>

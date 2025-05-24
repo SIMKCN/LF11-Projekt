@@ -3,7 +3,7 @@ import sqlite3
 
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
-    QDialog, QFormLayout
+    QDialog, QFormLayout, QListWidget, QFileDialog
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6 import uic
@@ -14,6 +14,39 @@ from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH
 from utils import show_error, format_exception, show_info
 from database import fetch_all
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
+
+
+class FileUploader(QDialog):  # <- change QWidget to QDialog
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        uic.loadUi("Qt/file_uploader_list.ui", self)
+
+        self.browseButton: QPushButton = self.findChild(QPushButton, "durchsuchen_button")
+        self.uploadButton: QPushButton = self.findChild(QPushButton, "hochladen_button")
+        self.fileListWidget: QListWidget = self.findChild(QListWidget, "datein_list_widget")
+
+        self.selected_files = []
+        self.result = None
+
+        self.browseButton.clicked.connect(self.browse_files)
+        self.uploadButton.clicked.connect(self.handle_upload)
+
+    def browse_files(self):
+        files, _ = QFileDialog.getOpenFileNames(self, "Logo auswählen")
+        if files:
+            self.selected_files = files
+            self.fileListWidget.clear()
+            self.fileListWidget.addItems(files)
+
+    def handle_upload(self):
+        if not self.selected_files:
+            print("Kein Logo ausgewählt")
+            return
+        self.result = self.selected_files[0]
+        self.accept() 
+
+    def get_result(self):
+        return self.result
 
 class CEOStNrDialog(QDialog):
     def __init__(self, ceo_names, parent=None):
@@ -169,6 +202,8 @@ class MainWindow(QMainWindow):
         self.w_rechnung_hinzufuegen.setVisible(False)
         self.de_erstellungsdatum.setDate(date.today())
         self.showMaximized()
+        btn_logo_upload = self.findChild(QPushButton, "btn_logo_upload")
+        btn_logo_upload.clicked.connect(self.open_logo_picker)
 
         # Variablen, um die ausgewählten IDs zu speichern
         self.selected_kunde_id = None
@@ -188,6 +223,22 @@ class MainWindow(QMainWindow):
             btn_felder_leeren.clicked.connect(self.clear_enabled_fields)
 
         self.findChild(QPushButton, "btn_eintrag_loeschen").clicked.connect(self.on_entry_delete)
+
+    def open_logo_picker(self):
+
+        self.picker = FileUploader(self)
+        self.picker.setWindowTitle("Logo auswählen")
+        self.picker.setModal(True)  # Optional: block until closed
+        self.picker.exec() if hasattr(self.picker, "exec") else self.picker.show()
+
+        # Access result after window closes
+        logo_path = self.picker.get_result()
+        if logo_path:
+            print("Logo selected:", logo_path)
+            # Do something with logo_path here
+        else:
+            print("No logo selected.")
+
 
     def init_tables(self):
         """

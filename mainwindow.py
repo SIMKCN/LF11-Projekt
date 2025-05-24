@@ -1,22 +1,24 @@
-# This file contains the MainWindow class for the application
+# IMPORT other Packages
 import mimetypes
 import os
 import sqlite3
-from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
-    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
-    QDialog, QFormLayout, QListWidget, QFileDialog, QVBoxLayout
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap
-from PyQt6.QtCore import QModelIndex, Qt, QTimer
-from PyQt6 import uic
 from datetime import date
 import sys
-from database import get_next_primary_key
+# IMPORT PyQt6 Packages
+from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QComboBox, \
+    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
+    QDialog, QFormLayout, QFileDialog
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QTextDocument
+from PyQt6.QtCore import QModelIndex, Qt, QTimer
+from PyQt6 import uic
+# IMPORT Functions from local scripts
+from database import get_next_primary_key, fetch_all
 from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME
 from utils import show_error, format_exception, show_info
-from database import fetch_all
-from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
+from logic import get_ceos_for_service_provider_form, get_service_provider_ceos
 
-
+# Class :QDialog: for gathering StNr of CEOs
 class CEOStNrDialog(QDialog):
     def __init__(self, ceo_names, parent=None):
         super().__init__(parent)
@@ -32,33 +34,37 @@ class CEOStNrDialog(QDialog):
         layout.addWidget(btn_ok)
         self.setLayout(layout)
 
+    # Function to get the data
     def get_ceo_st_numbers(self):
         return {ceo: field.text().strip() for ceo, field in self.ceo_fields.items()}
 
+# Class :QDialog: for gathering data of new positions
 class PositionDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi(POSITION_DIALOG_PATH, self)
 
+    # Function to get the data
     def get_data(self):
-        # Beispiel: Passe Feldnamen an die Namen im UI an
         return {
-            "NAME": self.le_name.text(),  # z.B. QLineEdit mit objectName 'le_name'
-            "DESCRIPTION": self.te_description.toPlainText(),  # QTextEdit
-            "AREA": self.sb_area.value(),  # QDoubleSpinBox
-            "UNIT_PRICE": self.sb_unit_price.value(),  # QDoubleSpinBox
+            "NAME": self.le_name.text(),
+            "DESCRIPTION": self.te_description.toPlainText(),
+            "AREA": self.sb_area.value(),
+            "UNIT_PRICE": self.sb_unit_price.value(),
         }
 
+# Class :QMainWindow: for the whole UI functionality
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         try:
+            # load UI file
             uic.loadUi(UI_PATH, self)
         except Exception as e:
             show_error(self, "UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
             sys.exit(1)
 
-        # Mapping table views to database views
+        # Mapping: QTableViews to database views
         self.table_mapping = {
             "tv_rechnungen": "view_invoices_full",
             "tv_dienstleister": "view_service_provider_full",
@@ -66,13 +72,13 @@ class MainWindow(QMainWindow):
             "tv_positionen": "view_positions_full",
         }
 
-        # Mapping for detail views
+        # Mapping: QTableViews to detail QTableViews
         self.detail_mapping = {
             "tv_rechnungen": self.tv_detail_rechnungen,
             "tv_dienstleister": self.tv_detail_dienstleister,
         }
 
-        # Mapping for PK column
+        # Mapping: QTableViews to PK column
         self.pk_field_config = {
             "tab_rechnungen": {"field": "tb_rechnungsnummer", "table": "INVOICES", "pk_col": "INVOICE_NR", "type": "invoice"},
             "tab_kunden": {"field": "tv_kunden_Kundennummer", "table": "CUSTOMERS", "pk_col": "CUSTID", "type": "customer"},
@@ -80,7 +86,7 @@ class MainWindow(QMainWindow):
             "tab_positionen": {"field": "tv_positionen_PositionsID", "table": "POSITIONS", "pk_col": "POS_ID", "type": "positions"}
         }
 
-        # Mapping for Search Label
+        # Mapping: Search label
         self.tab_search_label_text = {
             "tab_rechnungen": "Rechnungen durchsuchen",
             "tab_dienstleister": "Dienstleister durchsuchen",
@@ -88,8 +94,8 @@ class MainWindow(QMainWindow):
             "tab_positionen": "Positionen durchsuchen"
         }
 
+        # Mapping: Form fields to QTabs
         self.tab_field_mapping = {
-            # Achtung: Feldnamen müssen zu den UI-Feldnamen passen!
             "tab_kunden": [
                 "tv_kunden_Kundennummer", "tv_kunden_Vorname", "tv_kunden_Nachname", "tv_kunden_Geschlecht"
             ],
@@ -104,11 +110,10 @@ class MainWindow(QMainWindow):
             "tab_dienstleister_address": [
                 "tv_dienstleister_Strasse", "tv_dienstleister_Hausnummer", "tv_dienstleister_Stadt", "tv_dienstleister_PLZ", "tv_dienstleister_Land",
             ],
-            # Konten/BANK werden ggf. als Listeneintrag oder dynamische Felder erfasst
             "tab_rechnungen": [
                 "tb_rechnungsnummer", "de_erstellungsdatum", "dsb_lohnkosten", "dsb_mwst_lohnkosten", "dsb_mwst_positionen"
             ],
-            "tab_rechnungen_fk": [  # Foreign Keys für Relationen
+            "tab_rechnungen_fk": [
                 "fk_custid", "fk_ust_idnr"
             ],
             "tab_positionen": [
@@ -117,8 +122,7 @@ class MainWindow(QMainWindow):
             ]
         }
 
-        # Beispiel: Definition der Beziehungen (Tab-übergreifend)
-        # Diese Struktur beschreibt, wie Tabellen miteinander verbunden sind.
+        # Mapping: Relationships between the Tables/QTableViews/QTabs
         self.relationships = {
             "tab_kunden": {
                 "address": {
@@ -132,80 +136,84 @@ class MainWindow(QMainWindow):
                     "fields": self.tab_field_mapping["tab_dienstleister_address"],
                 },
                 "accounts": {
-                    "table": "ACCOUNT",  # IBAN, Bankbeziehung
-                    "fields": ["tv_dienstleister_IBAN", "tv_dienstleister_BIC", "tv_dienstleister_Kreditinstitut"],  # Passe die Feldnamen an deine GUI an!
-                    # "iban_input" → IBAN, "bic_input" → BIC, "bankname_input" → Name der Bank
+                    "table": "ACCOUNT",
+                    "fields": ["tv_dienstleister_IBAN", "tv_dienstleister_BIC", "tv_dienstleister_Kreditinstitut"],
                 }
             },
             "tab_rechnungen": {
                 "customer": {
                     "table": "CUSTOMERS",
-                    "fields": ["fk_custid"],  # z.B. als ComboBox oder LineEdit für Kundenauswahl
+                    "fields": ["fk_custid"],
                 },
                 "service_provider": {
                     "table": "SERVICE_PROVIDER",
-                    "fields": ["fk_ust_idnr"],  # z.B. als ComboBox oder LineEdit für Dienstleisterauswahl
+                    "fields": ["fk_ust_idnr"],
                 }
             },
             "tab_positionen": {
                 "invoice": {
                     "table": "INVOICES",
-                    "fields": ["fk_invoice_nr"],  # Rechnungsnummer als Fremdschlüssel
+                    "fields": ["fk_invoice_nr"],
                 }
             }
         }
 
+        # Initiation of UI and program itself
         self.temp_positionen = []
+        self.init_tables()
+        self.w_rechnung_hinzufuegen.setVisible(False)
+        self.de_erstellungsdatum.setDate(date.today())
+        self.showMaximized()
+        self.selected_kunde_id = None
+        self.selected_dienstleister_id = None
+        self.init_tv_rechnungen_form_tabellen()
 
         # Connect Signal for Tab Change
         self.tabWidget.currentChanged.connect(self.on_tab_changed)
         # set correct on start
         self.on_tab_changed(self.tabWidget.currentIndex())
+        self.update_export_button_state(self.tabWidget.currentIndex())
 
-        # Button-Einbindung für Speichern
+        # Connect Signal for Click on 'btn_eintrag_speichern'
         btn_speichern = self.findChild(QPushButton, "btn_eintrag_speichern")
         if btn_speichern:
             btn_speichern.clicked.connect(self.on_save_entry)
 
-        self.init_tables()
-        self.w_rechnung_hinzufuegen.setVisible(False)
-        self.de_erstellungsdatum.setDate(date.today())
-        self.showMaximized()
+        # Connect Signal for Click on 'btn_logo_upload'
         btn_logo_upload = self.findChild(QPushButton, "btn_logo_upload")
-        btn_logo_upload.clicked.connect(self.open_logo_picker)  
+        if btn_logo_upload:
+            btn_logo_upload.clicked.connect(self.open_logo_picker)
 
-        # Variablen, um die ausgewählten IDs zu speichern
-        self.selected_kunde_id = None
-        self.selected_dienstleister_id = None
-        self.init_tv_rechnungen_form_tabellen()
-
+        # Connect Signal for Click on 'btn_positionen_anlegen'
         btn_positionen_anlegen = self.findChild(QPushButton, "btn_positionen_anlegen")
         if btn_positionen_anlegen:
             btn_positionen_anlegen.clicked.connect(self.on_positionen_anlegen_clicked)
 
+        # Connect Signal for Click on 'btn_eintrag_hinzufuegen'
         btn_hinzufuegen = self.findChild(QPushButton, "btn_eintrag_hinzufuegen")
         if btn_hinzufuegen:
             btn_hinzufuegen.clicked.connect(self.clear_and_enable_form_fields)
 
+        # Connect Signal for Click on 'btn_felder_leeren'
         btn_felder_leeren = self.findChild(QPushButton, "btn_felder_leeren")
         if btn_felder_leeren:
-            btn_felder_leeren.clicked.connect(self.clear_enabled_fields)
+            btn_felder_leeren.clicked.connect(self.clear_and_enable_form_fields)
 
-        self.findChild(QPushButton, "btn_eintrag_loeschen").clicked.connect(self.on_entry_delete)
+        # Connect Signal for Click on 'btn_eintrag_loeschen'
+        btn_eintrag_loeschen = self.findChild(QPushButton, "btn_eintrag_loeschen")
+        if btn_eintrag_loeschen:
+            btn_eintrag_loeschen.clicked.connect(self.on_entry_delete)
 
-        # Suche: Button und Enter-Key
+        # Connect Signal for Click on 'btn_rechnung_exportieren'
+        self.btn_rechnung_exportieren = self.findChild(QPushButton, "btn_rechnung_exportieren")
+        if self.btn_rechnung_exportieren:
+            self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
 
+        # Set DEBOUNCE Timer for every search field
         self.search_timer = QTimer(self)
         self.search_timer.setSingleShot(True)
         self.tb_search_entries.textChanged.connect(self.on_search_text_changed)
 
-        self.btn_rechnung_exportieren = self.findChild(QPushButton, "btn_rechnung_exportieren")
-        if self.btn_rechnung_exportieren:
-            self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
-        self.tabWidget.currentChanged.connect(self.update_export_button_state)
-        self.update_export_button_state(self.tabWidget.currentIndex())
-
-        # Debounce-Timer für jedes Suchfeld
         self.search_timer_kunden = QTimer(self)
         self.search_timer_kunden.setSingleShot(True)
         self.search_timer_kunden.timeout.connect(self.search_kunden)
@@ -218,12 +226,12 @@ class MainWindow(QMainWindow):
         self.search_timer_positionen.setSingleShot(True)
         self.search_timer_positionen.timeout.connect(self.search_positionen)
 
-        # QLineEdit-Suchfelder holen
+        # get QLineEdit search fields in Rechnungen Form
         self.le_search_kunden = self.findChild(QLineEdit, "tb_search_kunden")
         self.le_search_dienstleister = self.findChild(QLineEdit, "tb_search_dienstleister")
         self.le_search_positionen = self.findChild(QLineEdit, "tb_search_positionen")
 
-        # Signal-Slot-Verbindungen für Debounce-Suche
+        # Connect Signal for Text Changed on QLineEdit search fields in Rechnungen Form
         if self.le_search_kunden:
             self.le_search_kunden.textChanged.connect(self.on_search_kunden_text_changed)
         if self.le_search_dienstleister:
@@ -231,48 +239,16 @@ class MainWindow(QMainWindow):
         if self.le_search_positionen:
             self.le_search_positionen.textChanged.connect(self.on_search_positionen_text_changed)
 
-    def open_logo_picker(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Logo auswählen",
-            "",
-            "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)"
-        )
-        if file_path:
-            self.selected_files = [file_path]
-            if hasattr(self, "fileListWidget"):
-                self.fileListWidget.clear()
-                self.fileListWidget.addItem(file_path)
-            self.file_path = file_path
-            self.file_name = os.path.basename(file_path)
-            with open(file_path, "rb") as f:
-                self.logo_data = f.read()
-            mime_type, _ = mimetypes.guess_type(file_path)
-            self.mime_type = mime_type
-            print("Bild gewählt:", self.file_name)
-            print("MIME-Type:", self.mime_type)
-        else:
-            self.selected_files = []
-            self.file_path = None
-            self.file_name = None
-            self.logo_data = None
-            self.mime_type = None
-            if hasattr(self, "fileListWidget"):
-                self.fileListWidget.clear()
 
+    # Initializes all table views by loading data from corresponding database views
     def init_tables(self):
-        """
-        Initializes all table views by loading data from corresponding database views.
-        """
         for table_view_name, db_view_name in self.table_mapping.items():
             table_view = self.findChild(QTableView, table_view_name)
             if table_view:
                 self.load_table(table_view, db_view_name)
 
+    # Loads data into a QTableView from a database view.
     def load_table(self, table_view: QTableView, db_view: str):
-        """
-        Loads data into a QTableView from a database view.
-        """
         try:
             data, columns = fetch_all(f"SELECT * FROM {db_view}")
         except Exception as e:
@@ -308,7 +284,7 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Table Population Error", error_message)
 
-
+    # Clears and enables all form fields
     def clear_and_enable_form_fields(self):
         try:
             self.temp_positionen = []
@@ -347,10 +323,8 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Form Reset Error", error_message)
 
+    # Handles the event when a row is selected in a table view
     def on_row_selected(self, current: QModelIndex, db_view: str, table_view: QTableView):
-        """
-        Handles the event when a row is selected in a table view.
-        """
         if not current.isValid():
             return
 
@@ -367,10 +341,8 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Row Selection Error", error_message)
 
+    # Updates the current form and lbl_eintrag_erstellt_datum with the selected row's data
     def update_form_and_label(self, current: QModelIndex, table_view: QTableView):
-        """
-        Updates the right-side form and lbl_eintrag_erstellt_datum with the selected row's data.
-        """
         model = current.model()
         if not model:
             return
@@ -418,10 +390,8 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Form Update Error", error_message)
 
+    # Loads CEO details for a selected service provider
     def load_service_provider_details(self, service_provider_id: str):
-        """
-        Loads CEO details for a selected service provider.
-        """
         try:
             data = get_service_provider_ceos(service_provider_id)
             model = QStandardItemModel()
@@ -436,10 +406,8 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Database Error", error_message)
 
+    # Loads all positions for selected row from INVOICE_ID
     def load_invoice_positions(self, invoice_id: str):
-        """
-        Lädt alle Positionen zur gegebenen Rechnungsnummer über die m:n-Relation und zeigt sie im TableView an.
-        """
         try:
             # Nur Positionen dieser Rechnung laden
             query = """
@@ -467,29 +435,10 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Database Error", error_message)
 
-    def clear_enabled_fields(self):
-        """
-        Clears only the enabled fields of the current tab.
-        """
-        try:
-            form_field_types = (QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit, QTextBrowser)
-            for field in self.findChildren(form_field_types):
-                if field.isVisible() and field.isEnabled():
-                    if isinstance(field, QLineEdit):
-                        field.clear()
-                    elif isinstance(field, QComboBox):
-                        field.setCurrentIndex(-1)
-                    elif isinstance(field, QDoubleSpinBox):
-                        field.setValue(0.0)
-                    elif isinstance(field, (QTextEdit, QPlainTextEdit, QTextBrowser)):
-                        field.clear()
-        except Exception as e:
-            error_message = f"Error while clearing enabled fields: {format_exception(e)}"
-            print(error_message)
-            show_error(self, "Field Clearing Error", error_message)
-
+    # Updates 'lbl_search_for' with corresponding tab name
     def on_tab_changed(self, index):
         try:
+            self.update_export_button_state
             current_tab = self.tabWidget.widget(index)
             if current_tab is not None:
                 tab_obj_name = current_tab.objectName()
@@ -500,18 +449,19 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Fehler beim Setzen des Suchlabels: {e}")
 
+    # Saves and commits the data from form current form into DB
     def on_save_entry(self):
         current_tab = self.tabWidget.currentWidget().objectName()
         main_fields = self.tab_field_mapping.get(current_tab, [])
         rels = self.relationships.get(current_tab, {})
 
-        # Hauptdaten validieren und sammeln
+        # check validation of entered data
         valid, main_data, error = self.validate_and_collect_fields(main_fields)
         if not valid:
             show_error(self, "Validierungsfehler", error)
             return
 
-        # Beziehungen mitsammeln (wenn weitere Relationen/Felder)
+        # Collects realtion data for corresponding case
         rel_data = {}
         for rel, rel_info in rels.items():
             fields = rel_info["fields"]
@@ -525,8 +475,9 @@ class MainWindow(QMainWindow):
             with sqlite3.connect(DB_PATH) as conn:
                 cur = conn.cursor()
 
+                # --------------RECHNUNGEN-------------------
                 if current_tab == "tab_rechnungen":
-                    # FKs holen wie gehabt
+                    # Creates data array for Tab Rechnungen
                     if "customer" in rel_data:
                         main_data["FK_CUSTID"] = rel_data["customer"].get("fk_custid",
                                                                           None) or self.get_selected_kunde_id()
@@ -538,7 +489,7 @@ class MainWindow(QMainWindow):
                     else:
                         main_data["FK_UST_IDNR"] = self.get_selected_dienstleister_id()
 
-                    # Rechnung speichern
+                    # INSERT collected data into INVOICES
                     cur.execute(
                         "INSERT INTO INVOICES (INVOICE_NR, CREATION_DATE, FK_CUSTID, FK_UST_IDNR, LABOR_COST, VAT_RATE_LABOR, VAT_RATE_POSITIONS) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (
@@ -552,14 +503,15 @@ class MainWindow(QMainWindow):
                         )
                     )
 
-                    # Nur die im TableView ausgewählten Positionen behandeln!
+                    # Collect only selected positions
                     selected_indexes = self.tv_rechnungen_form_positionen.selectionModel().selectedRows()
                     for idx in selected_indexes:
                         pos_id = idx.sibling(idx.row(), 0).data()
                         if str(pos_id).startswith("NEU-"):
-                            # Temporäre Position: speichern und verknüpfen
+                            # Collect and connect temporary positions (when created via the + button)
                             temp_index = int(str(pos_id).split("-")[1]) - 1
                             pos = self.temp_positionen[temp_index]
+                            # INSERT collected data into POSITIONS
                             cur.execute(
                                 "INSERT INTO POSITIONS (CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?)",
                                 (
@@ -571,23 +523,27 @@ class MainWindow(QMainWindow):
                                 )
                             )
                             new_pos_id = cur.lastrowid
+                            # INSERT collected data into REF_INVOICES_POSITIONS (for temporary positions)
                             cur.execute(
                                 "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
                                 (new_pos_id, main_data["tb_rechnungsnummer"])
                             )
                         else:
-                            # Bestehende Position: nur verknüpfen
+                            # INSERT collected data into REF_INVOICES_POSITIONS (for existing positions)
                             cur.execute(
                                 "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
                                 (int(pos_id), main_data["tb_rechnungsnummer"])
                             )
 
-                    # Nach dem Speichern temp_positionen leeren!
+                    # Clear temporary positions after Saving
                     self.temp_positionen = []
+                    # Reload all QTableViews
                     self.load_all_and_temp_positions_for_rechnungsformular()
 
+
+                #--------------KUNDEN-------------------
                 elif current_tab == "tab_kunden":
-                    # Adresse speichern und FK holen
+                    # INSERT collected data into ADDRESSES
                     address_id = None
                     if "address" in rel_data:
                         addr = rel_data["address"]
@@ -604,7 +560,7 @@ class MainWindow(QMainWindow):
                         )
                         address_id = cur.lastrowid
 
-                    # Kunde speichern mit ADDRESS_ID als FK
+                    # INSERT collected data into CUSTOMERS
                     cur.execute(
                         "INSERT INTO CUSTOMERS (CUSTID, FIRST_NAME, LAST_NAME, GENDER,CREATION_DATE, FK_ADDRESS_ID) VALUES (?, ?, ?, ?, ?, ?)",
                         (
@@ -618,46 +574,32 @@ class MainWindow(QMainWindow):
                     )
 
 
-
+                # --------------DIENSTLEISTER-------------------
                 elif current_tab == "tab_dienstleister":
-
-                    # 1. Adresse speichern
-
                     address_data = rel_data.get("addresses", {})
 
+                    # INSERT collected data into ADDRESSES
                     cur.execute(
-
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
-
                         (
-
                             address_data.get("tv_dienstleister_Strasse", ""),
-
                             address_data.get("tv_dienstleister_Hausnummer", ""),
-
                             address_data.get("tv_dienstleister_Stadt", ""),
-
                             address_data.get("tv_dienstleister_PLZ", ""),
-
                             address_data.get("tv_dienstleister_Land", ""),
-
                             date.today().strftime("%d.%m.%Y")
-
                         )
-
                     )
-
                     address_id = cur.lastrowid
-
-                    # 2. Logo speichern
                     logo_id = None
+                    # Checks if user selected a valid file
                     if (self.file_name
                             and self.logo_data
                             and len(self.logo_data) > 0):
-                        # Nutzer hat ein Logo ausgewählt
                         logo_file_name = self.file_name
                         logo_data = self.logo_data
                         file_type = self.mime_type or ""
+                        # INSERT collected data into LOGOS
                         cur.execute(
                             "INSERT INTO LOGOS (FILE_NAME, LOGO_BINARY, MIME_TYPE, CREATION_DATE) VALUES (?, ?, ?, ?)",
                             (
@@ -670,106 +612,69 @@ class MainWindow(QMainWindow):
                         logo_id = cur.lastrowid
 
                     else:
-
                         show_error(self, "Fehler", "Fehler beim Speichern des Logos")
 
-                    # 3. Dienstleister speichern (LOGO_ID als FK)
-
+                    # INSERT collected data into SERVICE_PROVIDER
                     cur.execute(
-
                         "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-
                         (
-
                             main_data["tv_dienstleister_UStIdNr"],
-
                             main_data.get("tv_dienstleister_Mobiltelefonnummer", ""),
-
                             main_data["tv_dienstleister_Unternehmensname"],
-
                             main_data.get("tv_dienstleister_Faxnummer", ""),
-
                             main_data["tv_dienstleister_Webseite"],
-
                             main_data["tv_dienstleister_Email"],
-
                             main_data["tv_dienstleister_Telefonnummer"],
-
                             date.today().strftime("%d.%m.%Y"),
-
                             address_id,
-
                             logo_id
-
                         )
-
                     )
 
-                    # 4. Bank prüfen und speichern
-
+                    # Checks if Bank exists and INSERT collected data into ACCOUNT NAD BANK
                     bank_data = rel_data.get("accounts", {})
-
                     bic = bank_data.get("tv_dienstleister_BIC", "")
-
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
-
                     iban = bank_data.get("tv_dienstleister_IBAN", "")
-
                     if bic and bank_name:
-
                         cur.execute("SELECT COUNT(*) FROM BANK WHERE BIC=?", (bic,))
-
                         if cur.fetchone()[0] == 0:
                             cur.execute("INSERT INTO BANK (BIC, BANK_NAME) VALUES (?, ?)", (bic, bank_name))
-
                     if iban and bic:
                         cur.execute(
-
                             "INSERT INTO ACCOUNT (IBAN, FK_BANK_ID, FK_UST_IDNR) VALUES (?, ?, ?)",
-
                             (iban, bic, main_data["tv_dienstleister_UStIdNr"])
-
                         )
 
-                    # 5. CEOs
-
+                    # Strips the collected CEOs list
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
-
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
 
+                    # Opens the :QDialog: CEOStNrDialog and gathers StNr for every CEO
                     if ceo_names:
-
                         ceo_dlg = CEOStNrDialog(ceo_names, self)
-
                         if ceo_dlg.exec() == QDialog.DialogCode.Accepted:
-
                             ceo_stnr_map = ceo_dlg.get_ceo_st_numbers()
-
                             for ceo_name, st_nr in ceo_stnr_map.items():
-
                                 if ceo_name and st_nr:
-
+                                    # INSERT collected data into CEO
                                     cur.execute("SELECT COUNT(*) FROM CEO WHERE ST_NR=?", (st_nr,))
-
                                     if cur.fetchone()[0] == 0:
                                         cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)",
                                                     (st_nr, ceo_name))
-
+                                    # INSERT collected data into REF_LABOR_COST
                                     cur.execute(
-
                                         "INSERT INTO REF_LABOR_COST (FK_ST_NR, FK_UST_IDNR) VALUES (?, ?)",
-
                                         (st_nr, main_data["tv_dienstleister_UStIdNr"])
-
                                     )
-
                         else:
-
                             show_error(self, "Abbruch", "Speichern ohne Steuernummern nicht möglich.")
-
                             return
+
+
+                # --------------POSITIONEN-------------------
                 elif current_tab == "tab_positionen":
-                    # Position speichern
+                    # INSERT collected data into POSITIONS
                     cur.execute(
                         "INSERT INTO POSITIONS (NAME, DESCRIPTION, AREA, UNIT_PRICE, CREATION_DATE) VALUES (?, ?, ?, ?, ?)",
                         (
@@ -782,17 +687,11 @@ class MainWindow(QMainWindow):
                     )
                     pos_id = cur.lastrowid
 
-                    # Optional: m:n-Zuordnung zu Rechnungen speichern, wenn im Formular möglich
-                    if "invoice" in rel_data and rel_data["invoice"].get("fk_invoice_nr"):
-                        invoice_nr = rel_data["invoice"]["fk_invoice_nr"]
-                        cur.execute(
-                            "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                            (pos_id, invoice_nr)
-                        )
-
+                # Commits current Session into DB
                 conn.commit()
+                # Reloads all QTableViews
                 self.refresh_tab_table_views()
-                self.temp_positionen = []
+                # Clear QTableViews in
                 self.load_all_and_temp_positions_for_rechnungsformular()
 
             show_info(self, "Erfolg", "Eintrag erfolgreich gespeichert.")
@@ -803,6 +702,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             show_error(self, "Speicherfehler", str(e))
 
+    # Validates collected data before commiting into DB
     def validate_and_collect_fields(self, field_names):
         data_map = {}
         for field_name in field_names:
@@ -828,34 +728,54 @@ class MainWindow(QMainWindow):
             data_map[field_name] = value
         return True, data_map, ""
 
+    # Initializes QTableViews in Rechnungen Form
     def init_tv_rechnungen_form_tabellen(self):
-        # Kunden-Tabelle
+        # Kunden QTableView
         self.tv_rechnungen_form_kunde = self.findChild(QTableView, "tv_rechnungen_form_kunde")
         if self.tv_rechnungen_form_kunde:
-            self.init_kunde_table()
+            try:
+                data, _ = fetch_all("SELECT CUSTID, FIRST_NAME || ' ' || LAST_NAME AS NAME FROM CUSTOMERS")
+                model = QStandardItemModel()
+                model.setHorizontalHeaderLabels(["Kundennummer", "Name"])
+                for row in data:
+                    items = [QStandardItem(str(cell)) for cell in row]
+                    for item in items:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    model.appendRow(items)
+                self.tv_rechnungen_form_kunde.setModel(model)
+                self.tv_rechnungen_form_kunde.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+                self.tv_rechnungen_form_kunde.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+                self.tv_rechnungen_form_kunde.selectionModel().selectionChanged.connect(self.on_kunde_selected)
+                self.tv_rechnungen_form_kunde.resizeColumnsToContents()
+            except Exception as e:
+                show_error(self, "Fehler beim Laden der Kunden", str(e))
 
-        # Dienstleister-Tabelle
+        # Dienstleister QTableView
         self.tv_rechnungen_form_dienstleister = self.findChild(QTableView, "tv_rechnungen_form_dienstleister")
         if self.tv_rechnungen_form_dienstleister:
-            self.init_dienstleister_table()
+            try:
+                data, _ = fetch_all("SELECT UST_IDNR, PROVIDER_NAME FROM SERVICE_PROVIDER")
+                model = QStandardItemModel()
+                model.setHorizontalHeaderLabels(["UStIdNr", "Unternehmensname"])
+                for row in data:
+                    items = [QStandardItem(str(cell)) for cell in row]
+                    for item in items:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    model.appendRow(items)
+                self.tv_rechnungen_form_dienstleister.setModel(model)
+                self.tv_rechnungen_form_dienstleister.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+                self.tv_rechnungen_form_dienstleister.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+                self.tv_rechnungen_form_dienstleister.selectionModel().selectionChanged.connect(
+                    self.on_dienstleister_selected)
+                self.tv_rechnungen_form_dienstleister.resizeColumnsToContents()
+            except Exception as e:
+                show_error(self, "Fehler beim Laden der Dienstleister", str(e))
 
-    def init_kunde_table(self):
-        try:
-            data, _ = fetch_all("SELECT CUSTID, FIRST_NAME || ' ' || LAST_NAME AS NAME FROM CUSTOMERS")
-            model = QStandardItemModel()
-            model.setHorizontalHeaderLabels(["Kundennummer", "Name"])
-            for row in data:
-                items = [QStandardItem(str(cell)) for cell in row]
-                for item in items:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                model.appendRow(items)
-            self.tv_rechnungen_form_kunde.setModel(model)
-            self.tv_rechnungen_form_kunde.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-            self.tv_rechnungen_form_kunde.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-            self.tv_rechnungen_form_kunde.selectionModel().selectionChanged.connect(self.on_kunde_selected)
-            self.tv_rechnungen_form_kunde.resizeColumnsToContents()
-        except Exception as e:
-            show_error(self, "Fehler beim Laden der Kunden", str(e))
+#********************************************************************************************
+#
+#               Hier weitermachen mit Code kommentieren und aufhübschen
+#
+#********************************************************************************************
 
     def on_kunde_selected(self, selected, deselected):
         if not selected.indexes():
@@ -865,24 +785,6 @@ class MainWindow(QMainWindow):
         model = self.tv_rechnungen_form_kunde.model()
         if model:
             self.selected_kunde_id = model.item(index.row(), 0).text()
-
-    def init_dienstleister_table(self):
-        try:
-            data, _ = fetch_all("SELECT UST_IDNR, PROVIDER_NAME FROM SERVICE_PROVIDER")
-            model = QStandardItemModel()
-            model.setHorizontalHeaderLabels(["UStIdNr", "Unternehmensname"])
-            for row in data:
-                items = [QStandardItem(str(cell)) for cell in row]
-                for item in items:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                model.appendRow(items)
-            self.tv_rechnungen_form_dienstleister.setModel(model)
-            self.tv_rechnungen_form_dienstleister.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-            self.tv_rechnungen_form_dienstleister.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-            self.tv_rechnungen_form_dienstleister.selectionModel().selectionChanged.connect(self.on_dienstleister_selected)
-            self.tv_rechnungen_form_dienstleister.resizeColumnsToContents()
-        except Exception as e:
-            show_error(self, "Fehler beim Laden der Dienstleister", str(e))
 
     def on_dienstleister_selected(self, selected, deselected):
         if not selected.indexes():
@@ -1219,6 +1121,7 @@ class MainWindow(QMainWindow):
         invoice_nr = idx.sibling(idx.row(), 0).data()
 
         try:
+            # === Datenbankabfrage wie bisher ===
             with sqlite3.connect(DB_PATH) as conn:
                 cur = conn.cursor()
 
@@ -1276,13 +1179,22 @@ class MainWindow(QMainWindow):
                 {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
             ]
 
-            print(export_data)
-            show_info(self, "Export", "Rechnungsdaten wurden ins Array geladen (siehe Konsole).")
-            return export_data
+            # === PDF-Export Teil ===
+            save_path, _ = QFileDialog.getSaveFileName(self, "Rechnung als PDF speichern", "", "PDF-Dateien (*.pdf)")
+            if not save_path:
+                return
+
+            html = self.build_invoice_html(export_data)
+            doc = QTextDocument()
+            doc.setHtml(html)
+            printer = QPrinter()
+            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+            printer.setOutputFileName(save_path)
+            doc.print(printer)
+            show_info(self, "Export", f"Rechnung erfolgreich als PDF exportiert: {save_path}")
 
         except Exception as e:
             show_error(self, "Export-Fehler", str(e))
-            return None
 
     def on_search_kunden_text_changed(self, text):
         self.search_timer_kunden.stop()
@@ -1357,6 +1269,35 @@ class MainWindow(QMainWindow):
         except Exception as e:
             show_error(self, "Suchfehler", str(e))
 
+    def open_logo_picker(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Logo auswählen",
+            "",
+            "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)"
+        )
+        if file_path:
+            self.selected_files = [file_path]
+            if hasattr(self, "fileListWidget"):
+                self.fileListWidget.clear()
+                self.fileListWidget.addItem(file_path)
+            self.file_path = file_path
+            self.file_name = os.path.basename(file_path)
+            with open(file_path, "rb") as f:
+                self.logo_data = f.read()
+            mime_type, _ = mimetypes.guess_type(file_path)
+            self.mime_type = mime_type
+            print("Bild gewählt:", self.file_name)
+            print("MIME-Type:", self.mime_type)
+        else:
+            self.selected_files = []
+            self.file_path = None
+            self.file_name = None
+            self.logo_data = None
+            self.mime_type = None
+            if hasattr(self, "fileListWidget"):
+                self.fileListWidget.clear()
+
     def show_service_provider_logo(self, ust_idnr):
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
@@ -1384,3 +1325,102 @@ class MainWindow(QMainWindow):
                     label.setScaledContents(False)
                 else:
                     label.clear()
+
+    def build_invoice_html(self, export_data):
+        invoice = export_data[0]['invoice']
+        customer = export_data[1]['customer']
+        service_provider = export_data[2]['service_provider']
+        ceos = export_data[3]['ceos']
+        positions = export_data[4]['positions']
+
+        # Summen berechnen (anpassen je nach Feldern in deiner Datenbank)
+        total_net = sum(float(pos.get("UNIT_PRICE", 0)) * float(pos.get("AREA", 0)) for pos in positions)
+        vat = float(invoice.get('VAT_RATE_LABOR', 19))
+        total_vat = total_net * vat / 100
+        total_gross = total_net + total_vat
+
+        # Positionen als HTML-Tabelle
+        pos_rows = ""
+        for idx, pos in enumerate(positions, 1):
+            pos_rows += f"""
+            <tr>
+                <td style="padding:4px;">{idx}</td>
+                <td style="padding:4px;">
+                    <b>{pos.get("NAME", "")}</b><br>
+                    <span style="font-size:10pt;">{pos.get("DESCRIPTION", "")}</span>
+                </td>
+                <td style="padding:4px;text-align:right;">{pos.get("AREA", "")} m&sup2;</td>
+                <td style="padding:4px;text-align:right;">{float(pos.get("UNIT_PRICE", 0)):.2f} &euro;</td>
+                <td style="padding:4px;text-align:right;">{float(pos.get("AREA", 0)) * float(pos.get("UNIT_PRICE", 0)):.2f} &euro;</td>
+            </tr>
+            """
+
+        # CEOs als Aufzählung, falls gewünscht
+        ceo_rows = "<br>".join(f"{ceo['CEO_NAME']} (St.-Nr.: {ceo['ST_NR']})" for ceo in ceos) if ceos else ""
+
+        html = f"""
+        <html>
+        <head>
+        <style>
+        body {{ font-family: Arial, sans-serif; font-size: 11pt; }}
+        .header-table td {{ vertical-align:top; }}
+        .summary-table td {{ padding:3px 10px; }}
+        </style>
+        </head>
+        <body>
+        <table width="100%" class="header-table">
+            <tr>
+                <td>
+                    <h2 style="margin-bottom:0;">{service_provider.get('PROVIDER_NAME', '')}</h2>
+                    {service_provider.get('STREET', '')} {service_provider.get('NUMBER', '')}<br>
+                    {service_provider.get('ZIP', '')} {service_provider.get('CITY', '')}
+                </td>
+                <td align="right">
+                    <!-- Firmenlogo kann per <img> eingebunden werden -->
+                </td>
+            </tr>
+        </table>
+        <hr>
+        <table width="100%">
+            <tr>
+                <td>
+                    <b>Rechnung an:</b><br>
+                    {customer.get('FIRST_NAME', '')} {customer.get('LAST_NAME', '')}<br>
+                    {customer.get('STREET', '')} {customer.get('NUMBER', '')}<br>
+                    {customer.get('ZIP', '')} {customer.get('CITY', '')}
+                </td>
+                <td align="right">
+                    <b>Rechnung Nr:</b> {invoice.get('INVOICE_NR', '')}<br>
+                    <b>Kundennummer:</b> {customer.get('CUSTID', '')}<br>
+                    <b>Datum:</b> {invoice.get('CREATION_DATE', '')}
+                </td>
+            </tr>
+        </table>
+        <h2>Rechnung</h2>
+        <p>Sehr geehrte/r {customer.get('FIRST_NAME', '')},<br>
+        vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.</p>
+        <table width="100%" border="1" cellspacing="0" cellpadding="3" style="border-collapse:collapse;">
+            <tr style="background:#25722E;color:#fff;">
+                <th>Pos.</th>
+                <th>Bezeichnung</th>
+                <th>Fläche</th>
+                <th>Einzelpreis</th>
+                <th>Preis</th>
+            </tr>
+            {pos_rows}
+        </table>
+        <br>
+        <table align="right" class="summary-table">
+            <tr><td>Nettobetrag:</td><td align="right">{total_net:.2f} &euro;</td></tr>
+            <tr><td>zzgl. MwSt. ({vat:.1f}%):</td><td align="right">{total_vat:.2f} &euro;</td></tr>
+            <tr><td><b>Bruttobetrag:</b></td><td align="right"><b>{total_gross:.2f} &euro;</b></td></tr>
+        </table>
+        <br style="clear:both;">
+        <p>Bitte überweisen Sie den offenen Betrag innerhalb von 14 Tagen auf das bekannte Konto.</p>
+        <p>Mit freundlichen Grüßen<br>{service_provider.get('PROVIDER_NAME', '')}</p>
+        <br>
+        <p><b>Geschäftsführer:</b><br>{ceo_rows}</p>
+        </body>
+        </html>
+        """
+        return html

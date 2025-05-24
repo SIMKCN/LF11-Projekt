@@ -26,9 +26,7 @@ Erstellung einer Rechungserstellungssoftware
 
 
 
-- [ ]    3.    autom. Width von Details Pages realisieren (zurückgestellt)
-- [ ]    10.    Einträge durchsuchen
-    - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab) 18.05.2025
+
 - [ ]    11.    Rechnungen erstellen
     - [ ]    Auswahl von Dienstleister + anlegen Button
     - [ ]    Auswahl von Kunden + anlegen Button
@@ -69,3 +67,6 @@ Erstellung einer Rechungserstellungssoftware
   - [x] Bankverbindungen  20.05.2025
 - [x]    Diensteister löschen 20.05.2025
 - [x]    Kunden löschen 20.05.2025
+- [x]    Einträge durchsuchen 24.05.2025
+    - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab) 18.05.2025
+- [ ]    autom. Width von Details Pages realisieren (zurückgestellt)

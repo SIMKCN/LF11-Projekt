@@ -5,12 +5,12 @@ from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLa
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
     QDialog, QFormLayout
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
-from PyQt6.QtCore import QModelIndex, Qt
+from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
 from datetime import date
 import sys
 from database import get_next_primary_key
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME
 from utils import show_error, format_exception, show_info
 from database import fetch_all
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
@@ -188,6 +188,14 @@ class MainWindow(QMainWindow):
             btn_felder_leeren.clicked.connect(self.clear_enabled_fields)
 
         self.findChild(QPushButton, "btn_eintrag_loeschen").clicked.connect(self.on_entry_delete)
+
+        # Suche: Button und Enter-Key
+
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.tb_search_entries.textChanged.connect(self.on_search_text_changed)
+
+
 
     def init_tables(self):
         """
@@ -987,3 +995,69 @@ class MainWindow(QMainWindow):
             self.tv_rechnungen_form_positionen.resizeColumnsToContents()
         except Exception as e:
             show_error(self, "Fehler beim Laden der Positionen", str(e))
+
+    def search_entries(self):
+        """
+        Durchsucht alle Spalten des aktuellen Tabs nach dem Suchtext aus tb_search_entries.
+        """
+        search_text_widget = self.findChild(QLineEdit, "tb_search_entries")
+        if not search_text_widget:
+            return
+        search_text = search_text_widget.text().strip()
+        if not search_text:
+            # Wenn kein Suchtext, Tabelle ganz normal laden
+            current_tab = self.tabWidget.currentWidget().objectName()
+            table_view_name = None
+            db_view_name = None
+            for k, v in self.table_mapping.items():
+                if k.replace("tv_", "tab_") == current_tab or k == f"tv_{current_tab.replace('tab_', '')}":
+                    table_view_name = k
+                    db_view_name = v
+            if table_view_name and db_view_name:
+                table_view = self.findChild(QTableView, table_view_name)
+                if table_view:
+                    self.load_table(table_view, db_view_name)
+            return
+
+        # Suche
+        current_tab = self.tabWidget.currentWidget().objectName()
+        table_view_name = None
+        db_view_name = None
+        for k, v in self.table_mapping.items():
+            if k.replace("tv_", "tab_") == current_tab or k == f"tv_{current_tab.replace('tab_', '')}":
+                table_view_name = k
+                db_view_name = v
+        if not db_view_name:
+            return
+
+        try:
+            # Spaltennamen holen
+            _, columns = fetch_all(f"SELECT * FROM {db_view_name} LIMIT 1")
+            # Query bauen: alle Spalten mit LIKE durchsuchen (als OR)
+            like_clauses = [f'"{col}" LIKE ?' for col in columns]
+            sql = f'SELECT * FROM {db_view_name} WHERE ' + " OR ".join(like_clauses)
+            params = [f'%{search_text}%'] * len(columns)
+            data, _ = fetch_all(sql, tuple(params))
+
+            # Anzeige aktualisieren
+            table_view = self.findChild(QTableView, table_view_name)
+            if table_view:
+                model = QStandardItemModel()
+                model.setHorizontalHeaderLabels(columns)
+                for row in data:
+                    items = [QStandardItem(str(cell)) for cell in row]
+                    for item in items:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    model.appendRow(items)
+                table_view.setModel(model)
+                table_view.resizeColumnsToContents()
+                table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+                table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        except Exception as e:
+            show_error(self, "Suchfehler", str(e))
+
+    # debouncing funktion verhindert performance crashes/probleme
+    def on_search_text_changed(self, text):
+        self.search_timer.stop()
+        self.search_timer.timeout.connect(self.search_entries)
+        self.search_timer.start(DEBOUNCE_TIME)  # DEBOUNCE_TIME warten

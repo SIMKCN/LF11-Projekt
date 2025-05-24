@@ -2,9 +2,6 @@
 <ui version="4.0">
  <class>mainWindow</class>
  <widget class="QMainWindow" name="mainWindow">
-  <property name="windowModality">
-   <enum>Qt::WindowModality::WindowModal</enum>
-  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -13,1664 +10,1374 @@
     <height>800</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="baseSize">
-   <size>
-    <width>16</width>
-    <height>9</height>
-   </size>
-  </property>
   <property name="windowTitle">
    <string>Rechnungsverwaltung</string>
   </property>
-  <property name="autoFillBackground">
-   <bool>true</bool>
-  </property>
-  <property name="toolButtonStyle">
-   <enum>Qt::ToolButtonStyle::ToolButtonFollowStyle</enum>
-  </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTabWidget" name="tabWidget">
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>54</y>
-      <width>1211</width>
-      <height>691</height>
-     </rect>
-    </property>
-    <property name="toolTipDuration">
-     <number>-1</number>
-    </property>
-    <property name="currentIndex">
-     <number>0</number>
-    </property>
-    <widget class="QWidget" name="tab_rechnungen">
-     <property name="contextMenuPolicy">
-      <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
-     </property>
-     <attribute name="title">
-      <string>Rechnungen</string>
-     </attribute>
-     <widget class="QGraphicsView" name="gv_rechnungen_vorschau">
-      <property name="geometry">
-       <rect>
-        <x>720</x>
-        <y>0</y>
-        <width>489</width>
-        <height>661</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QTableView" name="tv_rechnungen">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>721</width>
-        <height>431</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-       <bool>true</bool>
-      </attribute>
-     </widget>
-     <widget class="QWidget" name="w_rechnung_hinzufuegen" native="true">
-      <property name="geometry">
-       <rect>
-        <x>720</x>
-        <y>0</y>
-        <width>491</width>
-        <height>661</height>
-       </rect>
-      </property>
-      <widget class="QDateEdit" name="de_erstellungsdatum">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>130</y>
-         <width>131</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="calendarPopup">
-        <bool>true</bool>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_erstellungsdatum">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>110</y>
-         <width>131</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Erstellungsdatum</string>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="dsb_lohnkosten">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>200</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="suffix">
-        <string> €</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_lohnkosten">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>180</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Lohnkosten</string>
-       </property>
-      </widget>
-      <widget class="QDoubleSpinBox" name="dsb_mwst_lohnkosten">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>200</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="suffix">
-        <string> %</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_mwst_lohnkosten">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>180</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Mw.St. Lohnkosten</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="btn_close_rechnung_hinzufuegen">
-       <property name="geometry">
-        <rect>
-         <x>450</x>
-         <y>10</y>
-         <width>31</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/x.png</normaloff>icons/x.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>16</width>
-         <height>16</height>
-        </size>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tb_rechnungsnummer">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>60</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_rechnungsnummer">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>40</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Rechnungsnummer</string>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QTableView" name="tv_detail_rechnungen">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>430</y>
-        <width>721</width>
-        <height>231</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_kunden">
-     <attribute name="title">
-      <string>Kunden</string>
-     </attribute>
-     <widget class="QTableView" name="tv_kunden">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>721</width>
-        <height>661</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-       <bool>true</bool>
-      </attribute>
-     </widget>
-     <widget class="QLineEdit" name="tv_kunden_FIRST_NAME">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>60</y>
-        <width>201</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_vorname">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>40</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Vorname</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="tv_kunden_LAST_NAME">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>140</y>
-        <width>201</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_nachname">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>120</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Nachname</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_geschlecht">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>120</y>
-        <width>101</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Geschlecht</string>
-      </property>
-     </widget>
-     <widget class="QComboBox" name="tv_kunden_GENDER">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>140</y>
-        <width>71</width>
-        <height>31</height>
-       </rect>
-      </property>
+   <layout class="QVBoxLayout" name="verticalLayoutCentral">
+    <item>
+     <layout class="QHBoxLayout" name="searchBarLayout">
       <item>
-       <property name="text">
-        <string/>
-       </property>
+       <widget class="QLabel" name="lbl_search_for">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Nach Rechnungen suchen</string>
+        </property>
+       </widget>
       </item>
       <item>
-       <property name="text">
-        <string>m</string>
-       </property>
+       <widget class="QLineEdit" name="tb_search_entries">
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>24</height>
+         </size>
+        </property>
+       </widget>
       </item>
       <item>
-       <property name="text">
-        <string>w</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>d</string>
-       </property>
-      </item>
-     </widget>
-     <widget class="QGroupBox" name="groupBox_2">
-      <property name="geometry">
-       <rect>
-        <x>740</x>
-        <y>200</y>
-        <width>431</width>
-        <height>251</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Anschrift</string>
-      </property>
-      <widget class="QLabel" name="lbl_kd_hn">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>30</y>
-         <width>91</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Hausnummer</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kd_land">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>150</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Land</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_kunden_STREET">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>50</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kd_strasse">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Straße</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_kunden_NUMBER">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>50</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_kunden_CITY">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>110</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kd_plz">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>90</y>
-         <width>91</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>PLZ</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_kd_stadt">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>90</y>
-         <width>201</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Stadt</string>
-       </property>
-      </widget>
-      <widget class="QComboBox" name="tv_kunden_COUNTRY">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>170</y>
-         <width>201</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <item>
+       <widget class="QPushButton" name="btn_search">
+        <property name="minimumSize">
+         <size>
+          <width>28</width>
+          <height>28</height>
+         </size>
+        </property>
         <property name="text">
          <string/>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Deutschland</string>
+        <property name="icon">
+         <iconset>
+          <normaloff>icons/search.png</normaloff>icons/search.png</iconset>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Österreich</string>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lbl_eintrag_erstellt_datum">
+        <property name="minimumSize">
+         <size>
+          <width>170</width>
+          <height>24</height>
+         </size>
         </property>
-       </item>
-       <item>
         <property name="text">
-         <string>Schweiz</string>
+         <string/>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Frankreich</string>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerSearchRight">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Vereinigtes Königreich</string>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
         </property>
-       </item>
-      </widget>
-      <widget class="QLineEdit" name="tv_kunden_PLZ">
-       <property name="geometry">
-        <rect>
-         <x>240</x>
-         <y>110</y>
-         <width>91</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QLineEdit" name="tv_kunden_CUSTID">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>60</y>
-        <width>201</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_kdnr">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>40</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Kundennummer</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_dienstleister">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <attribute name="title">
-      <string>Dienstleister</string>
-     </attribute>
-     <widget class="QTableView" name="tv_dienstleister">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>721</width>
-        <height>431</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-       <bool>true</bool>
-      </attribute>
-     </widget>
-     <widget class="QLineEdit" name="tv_dienstleister_PROVIDER_NAME">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>40</y>
-        <width>211</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_unternehmen">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>20</y>
-        <width>211</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Unternehmen</string>
-      </property>
-     </widget>
-     <widget class="QGroupBox" name="groupBox">
-      <property name="geometry">
-       <rect>
-        <x>740</x>
-        <y>140</y>
-        <width>451</width>
-        <height>171</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Kontaktdaten</string>
-      </property>
-      <widget class="QLabel" name="lbl_dienst_tel">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Telefonnummer</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_TELNR">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_EMAIL">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_email">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>E-Mail</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_MOBILTELNR">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>90</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_mob">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Mobiltelefonnummer</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_WEBSITE">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>90</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_webseite">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>70</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Webseite</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_FAXNR">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>140</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_fax">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>120</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Faxnummer</string>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QGroupBox" name="groupBox_3">
-      <property name="geometry">
-       <rect>
-        <x>740</x>
-        <y>330</y>
-        <width>451</width>
-        <height>171</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Anschrift</string>
-      </property>
-      <widget class="QLabel" name="lbl_dienst_land">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>120</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Land</string>
-       </property>
-      </widget>
-      <widget class="QComboBox" name="tv_dienstleister_COUNTRY">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>140</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <item>
-        <property name="text">
-         <string>Deutschland</string>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="mainContentLayout">
+      <item>
+       <layout class="QVBoxLayout" name="buttonColumnLayout">
+        <item>
+         <spacer name="buttonColSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>150</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Neu</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_eintrag_loeschen">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Löschen</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/trash.png</normaloff>icons/trash.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_rechnung_exportieren">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Exportieren</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/file-export.png</normaloff>icons/file-export.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_felder_leeren">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Felder leeren</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/loschen.png</normaloff>icons/loschen.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_eintrag_speichern">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Speichern</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/scheibe.png</normaloff>icons/scheibe.png</iconset>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="currentIndex">
+         <number>0</number>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Österreich</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Schweiz</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Frankreich</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Vereinigtes Königreich</string>
-        </property>
-       </item>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_strasse">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Straße</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_STREET">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_CITY">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>90</y>
-         <width>211</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_stadt">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>211</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Stadt</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_NUMBER">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>40</y>
-         <width>81</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_hn">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>20</y>
-         <width>81</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Hausnummer</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="tv_dienstleister_PLZ">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>90</y>
-         <width>81</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-      </widget>
-      <widget class="QLabel" name="lbl_dienst_plz">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>70</y>
-         <width>81</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>PLZ</string>
-       </property>
-      </widget>
-     </widget>
-     <widget class="QLineEdit" name="tv_dienstleister_UST_IDNR">
-      <property name="geometry">
-       <rect>
-        <x>970</x>
-        <y>40</y>
-        <width>211</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_ustidnr">
-      <property name="geometry">
-       <rect>
-        <x>970</x>
-        <y>20</y>
-        <width>211</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>USt - IdNr.</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="tv_dienstleister_CEOS">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>100</y>
-        <width>431</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_dienst_ceo">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>80</y>
-        <width>431</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Geschäftsführer*innen</string>
-      </property>
-     </widget>
-     <widget class="QTableView" name="tv_detail_dienstleister">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>430</y>
-        <width>721</width>
-        <height>231</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_positionen">
-     <attribute name="title">
-      <string>Positionen</string>
-     </attribute>
-     <widget class="QTableView" name="tv_positionen">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>721</width>
-        <height>661</height>
-       </rect>
-      </property>
-      <property name="sortingEnabled">
-       <bool>true</bool>
-      </property>
-      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-       <bool>true</bool>
-      </attribute>
-     </widget>
-     <widget class="QLabel" name="lbl_bezeichnung">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>110</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Bezeichnung</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="tv_positionen_NAME">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>130</y>
-        <width>431</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_beschreibung">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>190</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Beschreibung</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_flaeche">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>330</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Fläche</string>
-      </property>
-     </widget>
-     <widget class="QDoubleSpinBox" name="tv_positionen_AREA">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>350</y>
-        <width>201</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_ppe">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>330</y>
-        <width>201</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Preis pro Einheit</string>
-      </property>
-     </widget>
-     <widget class="QDoubleSpinBox" name="tv_positionen_UNIT_PRICE">
-      <property name="geometry">
-       <rect>
-        <x>980</x>
-        <y>350</y>
-        <width>201</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="suffix">
-       <string> €</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="tv_positionen_POS_ID">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>60</y>
-        <width>121</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-     </widget>
-     <widget class="QLabel" name="lbl_pos">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>40</y>
-        <width>121</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Positionsnummer</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="tv_positionen_DESCRIPTION">
-      <property name="geometry">
-       <rect>
-        <x>750</x>
-        <y>210</y>
-        <width>431</width>
-        <height>111</height>
-       </rect>
-      </property>
-     </widget>
-    </widget>
-   </widget>
-   <widget class="QLabel" name="lbl_eintrag_erstellt_datum">
-    <property name="geometry">
-     <rect>
-      <x>1200</x>
-      <y>50</y>
-      <width>171</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>11</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>160</x>
-      <y>0</y>
-      <width>361</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="2" column="0">
-      <widget class="QLineEdit" name="tb_search_entries">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="lbl_search_for">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Nach Rechnungen suchen</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QPushButton" name="btn_search">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/search.png</normaloff>icons/search.png</iconset>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget_2">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>151</width>
-      <height>741</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="3" column="1">
-      <widget class="QPushButton" name="btn_rechnung_exportieren">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/file-export.png</normaloff>icons/file-export.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QPushButton" name="btn_eintrag_loeschen">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/trash.png</normaloff>icons/trash.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0" colspan="2">
-      <widget class="QPushButton" name="btn_eintrag_speichern">
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="toolTipDuration">
-        <number>-1</number>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/scheibe.png</normaloff>icons/scheibe.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QPushButton" name="btn_felder_leeren">
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="toolTipDuration">
-        <number>-1</number>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>icons/loschen.png</normaloff>icons/loschen.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>32</width>
-         <height>32</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Orientation::Vertical</enum>
-       </property>
-       <property name="sizeType">
-        <enum>QSizePolicy::Policy::Expanding</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>200</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
-   </widget>
+        <widget class="QWidget" name="tab_rechnungen">
+         <attribute name="title">
+          <string>Rechnungen</string>
+         </attribute>
+         <layout class="QHBoxLayout" name="layoutTabRechnungenMain">
+          <item>
+           <layout class="QVBoxLayout" name="layoutRechnungenTables">
+            <item>
+             <widget class="QTableView" name="tv_rechnungen">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTableView" name="tv_detail_rechnungen">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QWidget" name="w_rechnung_hinzufuegen" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <widget class="QWidget" name="w_rechnung_form">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>621</width>
+               <height>697</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="vertical_layout_">
+              <item>
+               <layout class="QGridLayout" name="gridLayout">
+                <item row="1" column="1">
+                 <layout class="QFormLayout" name="rechnungenForm">
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="lbl_rechnungsnummer">
+                    <property name="text">
+                     <string>Rechnungsnummer</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="tb_rechnungsnummer">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>24</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="lbl_erstellungsdatum">
+                    <property name="text">
+                     <string>Erstellungsdatum</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QDateEdit" name="de_erstellungsdatum">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>24</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="lbl_lohnkosten">
+                    <property name="text">
+                     <string>Lohnkosten</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QDoubleSpinBox" name="dsb_lohnkosten">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>24</height>
+                     </size>
+                    </property>
+                    <property name="suffix">
+                     <string> €</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="lbl_mwst_lohnkosten">
+                    <property name="text">
+                     <string>Mw.St. Lohnkosten</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QDoubleSpinBox" name="dsb_mwst_lohnkosten">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>24</height>
+                     </size>
+                    </property>
+                    <property name="suffix">
+                     <string> %</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QTableView" name="tv_rechnungen_form_kunde"/>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QTableView" name="tv_rechnungen_form_dienstleister"/>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QPushButton" name="btn_kunden_anlegen">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>10</width>
+                      <height>10</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>20</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                    <property name="baseSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset>
+                      <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QPushButton" name="btn_dienstleister_anlegen">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>20</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset>
+                      <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="0" colspan="2">
+                   <widget class="QTableView" name="tv_rechnungen_form_positionen"/>
+                  </item>
+                  <item row="9" column="0">
+                   <widget class="QPushButton" name="btn_positionen_anlegen">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>20</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset>
+                      <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="btn_close_rechnung_hinzufuegen">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset>
+                      <normaloff>icons/x.png</normaloff>icons/x.png</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="lbl_vat_Positionen">
+                    <property name="text">
+                     <string>Mw.St. Positionen</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QDoubleSpinBox" name="dsb_mwst_positionen"/>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_kunden">
+         <attribute name="title">
+          <string>Kunden</string>
+         </attribute>
+         <layout class="QHBoxLayout" name="layoutTabKundenMain">
+          <item>
+           <widget class="QTableView" name="tv_kunden">
+            <property name="editTriggers">
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="kundenFormColumn">
+            <item>
+             <layout class="QGridLayout" name="kundenForm">
+              <item row="0" column="0">
+               <widget class="QLabel" name="lbl_vorname">
+                <property name="minimumSize">
+                 <size>
+                  <width>85</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Vorname</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="tv_kunden_Vorname">
+                <property name="minimumSize">
+                 <size>
+                  <width>110</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="lbl_nachname">
+                <property name="minimumSize">
+                 <size>
+                  <width>85</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Nachname</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLineEdit" name="tv_kunden_Nachname">
+                <property name="minimumSize">
+                 <size>
+                  <width>110</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="lbl_kdnr">
+                <property name="minimumSize">
+                 <size>
+                  <width>85</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Kundennummer</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="tv_kunden_Kundennummer">
+                <property name="minimumSize">
+                 <size>
+                  <width>110</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="lbl_geschlecht">
+                <property name="minimumSize">
+                 <size>
+                  <width>85</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Geschlecht</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QComboBox" name="tv_kunden_Geschlecht">
+                <item>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>m</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>w</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>d</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox_2">
+                <property name="title">
+                 <string>Anschrift</string>
+                </property>
+                <layout class="QGridLayout" name="anschriftGridLayout">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_kd_strasse">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Straße</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="tv_kunden_Strasse">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLabel" name="lbl_kd_hn">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Hausnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLineEdit" name="tv_kunden_Hausnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>60</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_kd_stadt">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Stadt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="tv_kunden_Stadt">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QLabel" name="lbl_kd_plz">
+                   <property name="minimumSize">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>PLZ</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="3">
+                  <widget class="QLineEdit" name="tv_kunden_PLZ">
+                   <property name="minimumSize">
+                    <size>
+                     <width>60</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="lbl_kd_land">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Land</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1" colspan="3">
+                  <widget class="QComboBox" name="tv_kunden_Land">
+                   <item>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Deutschland</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Österreich</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Schweiz</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Frankreich</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Vereinigtes Königreich</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="kundenFormSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Policy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>500</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_dienstleister">
+         <attribute name="title">
+          <string>Dienstleister</string>
+         </attribute>
+         <layout class="QHBoxLayout" name="layoutTabDienstleisterMain">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <widget class="QTableView" name="tv_dienstleister">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTableView" name="tv_detail_dienstleister">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="dienstleisterFormColumn">
+            <item>
+             <layout class="QGridLayout" name="dienstleisterForm">
+              <item row="1" column="0">
+               <widget class="QLabel" name="lbl_unternehmen">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Unternehmen</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1" colspan="3">
+               <widget class="QLineEdit" name="tv_dienstleister_CEOS">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QLineEdit" name="tv_dienstleister_UStIdNr">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox_3">
+                <property name="title">
+                 <string>Anschrift</string>
+                </property>
+                <layout class="QGridLayout" name="gridDienstAnschrift">
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="lbl_dienst_land">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Land</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLabel" name="lbl_dienst_hn">
+                   <property name="text">
+                    <string>Hausnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLineEdit" name="tv_dienstleister_Strasse">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_dienst_stadt">
+                   <property name="text">
+                    <string>Stadt</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_dienst_strasse">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Straße</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="2">
+                  <widget class="QComboBox" name="tv_dienstleister_Land">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Deutschland</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Österreich</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Schweiz</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Frankreich</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Vereinigtes Königreich</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="0" column="4">
+                  <widget class="QLineEdit" name="tv_dienstleister_Hausnummer">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QLineEdit" name="tv_dienstleister_Stadt">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="3">
+                  <widget class="QLabel" name="lbl_dienst_plz">
+                   <property name="text">
+                    <string>PLZ</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="4">
+                  <widget class="QLineEdit" name="tv_dienstleister_PLZ">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox">
+                <property name="title">
+                 <string>Kontaktdaten</string>
+                </property>
+                <layout class="QGridLayout" name="gridKontakt">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_dienst_tel">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Telefonnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Telefonnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLabel" name="lbl_dienst_email">
+                   <property name="minimumSize">
+                    <size>
+                     <width>80</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>E-Mail</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Email">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_dienst_mob">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Mobiltelefonnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Mobiltelefonnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QLabel" name="lbl_dienst_webseite">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Webseite</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Webseite">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="lbl_dienst_fax">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Faxnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Faxnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="lbl_ustidnr">
+                <property name="text">
+                 <string>USt - IdNr.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="tv_dienstleister_Unternehmensname">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="lbl_dienst_ceo">
+                <property name="text">
+                 <string>Geschäftsführer*innen</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox_4">
+                <property name="title">
+                 <string>Bankverbindung</string>
+                </property>
+                <layout class="QGridLayout" name="gridDienstAnschrift_2">
+                 <item row="0" column="3">
+                  <widget class="QLabel" name="lbl_dienst_bic">
+                   <property name="text">
+                    <string>BIC</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_dienst_iban">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>IBAN</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_dienst_bank">
+                   <property name="text">
+                    <string>Kreditinstitut</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLineEdit" name="tv_dienstleister_IBAN">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="4">
+                  <widget class="QLineEdit" name="tv_dienstleister_BIC">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2" colspan="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Kreditinstitut">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Policy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>10</width>
+                <height>150</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_positionen">
+         <attribute name="title">
+          <string>Positionen</string>
+         </attribute>
+         <layout class="QHBoxLayout" name="layoutTabPositionenMain">
+          <item>
+           <widget class="QTableView" name="tv_positionen">
+            <property name="editTriggers">
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="positionenFormColumn">
+            <item>
+             <layout class="QGridLayout" name="gridPositionenForm">
+              <item row="3" column="1" colspan="3">
+               <widget class="QTextEdit" name="tv_positionen_Beschreibung">
+                <property name="minimumSize">
+                 <size>
+                  <width>300</width>
+                  <height>50</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="lbl_pos_bez">
+                <property name="minimumSize">
+                 <size>
+                  <width>95</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Bezeichnung</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="tv_positionen_PositionsID">
+                <property name="minimumSize">
+                 <size>
+                  <width>120</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1" colspan="3">
+               <widget class="QLineEdit" name="tv_positionen_Bezeichnung">
+                <property name="minimumSize">
+                 <size>
+                  <width>120</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3">
+               <widget class="QDoubleSpinBox" name="tv_positionen_Einzelpreis">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="suffix">
+                 <string> €</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="lbl_pos_beschreibung">
+                <property name="minimumSize">
+                 <size>
+                  <width>95</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Beschreibung</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="lbl_flaeche">
+                <property name="minimumSize">
+                 <size>
+                  <width>95</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Fläche</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="lbl_pos">
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Positionsnummer</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QDoubleSpinBox" name="tv_positionen_Flaeche">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="suffix">
+                 <string> qm</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="2">
+               <widget class="QLabel" name="lbl_ppe">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>95</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Preis pro Einheit</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="positionenFormSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Policy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>150</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1400</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <widget class="QMenu" name="menuDatei">
-    <property name="title">
-     <string>Datei</string>
-    </property>
-    <widget class="QMenu" name="menuRechnung_exportieren">
-     <property name="title">
-      <string>Rechnung exportieren</string>
-     </property>
-     <addaction name="actionExportieren_als_PDF"/>
-     <addaction name="actionExportieren_als_XML"/>
-    </widget>
-    <addaction name="actionNeue_Rechnung"/>
-    <addaction name="actionNeuer_Dienstleister"/>
-    <addaction name="actionNeuer_Kunde"/>
-    <addaction name="separator"/>
-    <addaction name="actionRechnung_bearbeiten"/>
-    <addaction name="separator"/>
-    <addaction name="menuRechnung_exportieren"/>
-   </widget>
-   <widget class="QMenu" name="menuBearbeiten">
-    <property name="title">
-     <string>Bearbeiten</string>
-    </property>
-    <addaction name="actionRechnung_bearbeiten_2"/>
-    <addaction name="actionDienstleister_bearbeiten"/>
-    <addaction name="actionKunden_bearbeiten"/>
-   </widget>
-   <widget class="QMenu" name="menuHilfe">
-    <property name="title">
-     <string>Hilfe</string>
-    </property>
-    <addaction name="actionDokumentation"/>
-    <addaction name="actionInformationen_zum_Programm"/>
-   </widget>
-   <addaction name="menuDatei"/>
-   <addaction name="menuBearbeiten"/>
-   <addaction name="menuHilfe"/>
-  </widget>
-  <action name="actionNeue_Rechnung">
-   <property name="text">
-    <string>Neue Rechnung</string>
-   </property>
-  </action>
-  <action name="actionNeuer_Dienstleister">
-   <property name="text">
-    <string>Neuer Dienstleister</string>
-   </property>
-  </action>
-  <action name="actionNeuer_Kunde">
-   <property name="text">
-    <string>Neuer Kunde</string>
-   </property>
-  </action>
-  <action name="actionRechnung_bearbeiten">
-   <property name="text">
-    <string>Rechnung öffnen</string>
-   </property>
-  </action>
-  <action name="actionExportieren_als_PDF">
-   <property name="text">
-    <string>Exportieren als PDF</string>
-   </property>
-  </action>
-  <action name="actionExportieren_als_XML">
-   <property name="text">
-    <string>Exportieren als XML</string>
-   </property>
-  </action>
-  <action name="actionRechnung_bearbeiten_2">
-   <property name="text">
-    <string>Rechnung bearbeiten</string>
-   </property>
-  </action>
-  <action name="actionDienstleister_bearbeiten">
-   <property name="text">
-    <string>Dienstleister bearbeiten</string>
-   </property>
-  </action>
-  <action name="actionKunden_bearbeiten">
-   <property name="text">
-    <string>Kunden bearbeiten</string>
-   </property>
-  </action>
-  <action name="actionDokumentation">
-   <property name="text">
-    <string>Dokumentation</string>
-   </property>
-  </action>
-  <action name="actionInformationen_zum_Programm">
-   <property name="text">
-    <string>Information zum Programm</string>
-   </property>
-  </action>
  </widget>
  <resources/>
  <connections>
@@ -1681,12 +1388,12 @@
    <slot>show()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>105</x>
-     <y>472</y>
+     <x>79</x>
+     <y>226</y>
     </hint>
     <hint type="destinationlabel">
-     <x>954</x>
-     <y>584</y>
+     <x>1020</x>
+     <y>277</y>
     </hint>
    </hints>
   </connection>
@@ -1697,17 +1404,14 @@
    <slot>hide()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1348</x>
-     <y>135</y>
+     <x>1131</x>
+     <y>210</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1265</x>
-     <y>143</y>
+     <x>1051</x>
+     <y>275</y>
     </hint>
    </hints>
   </connection>
  </connections>
- <slots>
-  <slot>on_current_tab_changed(QModelIndex)</slot>
- </slots>
 </ui>

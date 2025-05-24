@@ -1,6 +1,6 @@
-# ![Projektlogo](./logo.png)
+# ![Projektlogo](./data/app_logo2.png)
 
-# LF11: Rechnungsverwaltungssoftware
+# LF11: Invoice Manager
 
 ## Anwenderdokumentation & Entwicklungsdokumentation
 
@@ -8,7 +8,7 @@
 
 ## Inhaltsverzeichnis
 
-1. [Deckblatt](#deckblatt)
+1. [Produktinformationen](#produktinformationen)
 2. [Projektübersicht](#projektübersicht)
 3. [Inhaltsverzeichnis](#inhaltsverzeichnis)
 4. [Anwenderdokumentation](#anwenderdokumentation)
@@ -37,15 +37,15 @@
 
 ---
 
-## Deckblatt
+## Produktinformationen
 
-|                  |                               |
-|------------------|-------------------------------|
-| **Projekt:**     | Rechnungsverwaltungsssoftware |
-| **Version:**     | A 1.1.1                       |
-| **Datum:**       | 20205-05-16                   |
-| **Autor:innen:** | Sebastian Große               |
-| **Kontakt:**     | sebastian.grosse@grossese.de  |
+|                  |                              |
+|------------------|------------------------------|
+| **Projekt:**     | Invoice Manager              |
+| **Version:**     | 1.0                          |
+| **Datum:**       | 24.05.2025                   |
+| **Autor:innen:** | Sebastian Große              |
+| **Kontakt:**     | sebastian.grosse@grossese.de |
 
 ---
 
@@ -89,7 +89,7 @@ pip install -r requirements.txt
 
 ### Konfiguration
 
-Erkläre Konfigurationsmöglichkeiten, Umgebungsvariablen oder Dateien.
+Konfigurationen der Anwendung können in der Datei ```config.py``` vorgenommen werden. Die Anpassung der Debounce-Time der Echtzeitsuche kann dort ebenfalls geschehen.
 
 ---
 
@@ -134,25 +134,93 @@ Füge relevante Screenshots oder GIFs ein.
 
 ### Architekturüberblick
 
-Beschreibe die Software-Architektur (gerne mit Diagrammen).
+Die Software wurde mit der Programmiersprache Python (v3.13) programmiert und benötigt einige Dependencies wie PyQt6, die vorher - wie Python selbst - installiert sein müssen.
+Die Speicherung der Daten erfolgt mit Hilfe einer lokalen SQLite-Datenbank. Dieser spezielle Datenbanktyp wird lokal in einer DB-Datei gespeichert.
+Das Nutzerinterface wurde mit QtDesigner erstellt und ist bis ins letzte Detail responsive. Es passt sich somit an die Display-Begebenheiten eines jeden Nutzers an.
 
 ---
 
 ### Projektstruktur
 
 ```text
-root/
-├── src/
-├── tests/
-├── docs/
+/
+├── data/
+├── Qt/
+    ├── icons/
 ├── ...
 ```
 
 ---
 
-### Entwicklungsumgebung einrichten
+### Funktionsdokumentation
 
-Anleitung zum Einrichten der Entwicklungsumgebung.
+**Funktionsname:**  
+`init_tables`
+
+**Parameter (Input):**
+- `self` (*QMainWindow*): MainWindow
+
+**Funktionsweise / Nutzen:**  
+Diese Funktion übernimmt das Ausführen der Funktion `load_table` für jede QTableView ausgewiesen im Array `table_mapping`.
+
+---
+
+**Funktionsname:**  
+`load_table`
+
+**Parameter (Input):**
+- `self` (*QMainWindow*): MainWindow
+- `table_view` (*QTableView*): TableView
+- `db_view` (*str*): Datenbank View
+
+**Funktionsweise / Nutzen:**  
+Diese Funktion übernimmt das Laden der Daten aus der Datenbank.  
+Sie wird eingesetzt, um die gesammelten Daten in ein Model zu speichern und die QTableView zu rendern.
+
+---
+
+**Funktionsname:**  
+`clear_and_enable_form_fields`
+
+**Parameter (Input):**
+- `self` (*QMainWindow*): MainWindow
+
+**Funktionsweise / Nutzen:**  
+Diese Funktion übernimmt das Leeren aller Eingabefelder des aktuellen Formulars.  
+Sie nutzt die Funktion `get_next_primary_key`, um das Eingabefeld des PrimaryKeys automatisch mit dem nächsten PK-Wert zu füllen.
+
+---
+
+**Funktionsname:**  
+`on_row_selected`
+
+**Parameter (Input):**
+- `self` (*QMainWindow*): MainWindow
+- `current` (*QModelIndex*): Aktuelle TableView
+- `db_view` (*str*): Datenbank View
+- `table_view` (*QTableView*): TableView
+
+**Funktionsweise / Nutzen:**  
+Diese Funktion übernimmt das Laden der Detail-TableViews für Rechnungen und Dienstleister.  
+Sie wird eingesetzt, um das Formular mit den Daten des ausgewählten Eintrages zu füllen und das Label des Erstellungsdatums zu aktualisieren. Dafür verwendet sie die Funktionen `load_invoice_positions`, `load_service_provider_details` und `update_form_and_label`.  
+
+---
+
+**Funktionsname:**  
+`update_form_and_label`
+
+**Parameter (Input):**
+- `self` (*QMainWindow*): MainWindow
+- `current` (*QModelIndex*): Aktuelle TableView
+- `table_view` (*QTableView*): TableViews
+
+**Rückgabewert (Output):**
+- *Datentyp*: Beschreibung des Rückgabewerts.
+
+**Funktionsweise / Nutzen:**  
+Diese Funktion übernimmt … (z. B. eine bestimmte Berechnung, Datenverarbeitung, Validierung etc.).  
+Sie wird eingesetzt, um … (Nutzen im Gesamtzusammenhang des Programms oder Moduls erklären).  
+(Optional) Besonderheiten: z. B. Fehlertoleranz, Abhängigkeiten, Performanceaspekte.
 
 ---
 
@@ -166,37 +234,33 @@ Anleitung zum Einrichten der Entwicklungsumgebung.
 
 ### Wichtige Module & Komponenten
 
-| Modul         | Beschreibung                |
-|---------------|----------------------------|
-| modul1.py     | Verantwortlich für X       |
-| modul2.py     | Zuständig für Y            |
+| Modul         | Beschreibung                                                                              |
+|---------------|-------------------------------------------------------------------------------------------|
+| mainwindow.py | Verantwortlich für die gesamte Funktionalitäten um das Main-Fenster und die Dialogfenster |
+| utils.py      | Verantwortlich zum anzeigen von Fehler- und Informationsmeldungen                         |
+| database.py   | Verantwortlich für die Konfiguration der Umgebungsvariablen                               |
+| databse.py    |                                                                                           |
+| logic.py      |                                                                                           |
+| main.py       | Verantwortlich für das Starten des Programmes                                             |
 
 ---
 
 ### Datenbankschema
 
-Füge Diagramme oder Tabellenübersichten ein.
+![Datenbankmodell](./data/rechnungsverwaltung.png)
 
----
-
-### API-Endpunkte
-
-| Methode | Endpunkt     | Beschreibung        |
-|---------|--------------|--------------------|
-| GET     | /api/item    | Alle Items abrufen |
-| POST    | /api/item    | Item erstellen     |
 
 ---
 
 ### Tests
 
-Beschreibe die Teststrategie, Frameworks und wie Tests ausgeführt werden.
+Tests fanden innerhalb des Teams statt. Der Product Owner sowie der Scrum Master haben in regelmäßigen zeitlichen Abständen Tests von neu hinzugefügten Features vorgenommen.
 
 ---
 
 ### Deployment
 
-Anleitung zum Deployment der Anwendung.
+--
 
 ---
 
@@ -204,19 +268,19 @@ Anleitung zum Deployment der Anwendung.
 
 | Version | Datum      | Änderungen              |
 |---------|------------|-------------------------|
-| 1.0.0   | JJJJ-MM-TT | Erste Veröffentlichung  |
+| 1.0.0   | 24.05.2025 | Erste Veröffentlichung  |
 
 ---
 
 ### Beitragende & Beiträge
 
-Richtlinien für Beitragende.
+--
 
 ---
 
 ### Lizenz
 
-Gib die Projektlizenz an.
+GPL-3.0
 
 ---
 

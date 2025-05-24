@@ -1,9 +1,11 @@
 # This file contains the MainWindow class for the application
+import mimetypes
+import os
 import sqlite3
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
     QDialog, QFormLayout, QListWidget, QFileDialog, QVBoxLayout
-from PyQt6.QtGui import QStandardItemModel, QStandardItem
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
 from datetime import date
@@ -13,40 +15,6 @@ from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME
 from utils import show_error, format_exception, show_info
 from database import fetch_all
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
-
-
-class FileUploader(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.browseButton = QPushButton("Durchsuchen")
-        self.uploadButton = QPushButton("Hochladen")
-        self.fileListWidget = QListWidget()
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.browseButton)
-        layout.addWidget(self.uploadButton)
-        layout.addWidget(self.fileListWidget)
-        self.setLayout(layout)
-
-        self.selected_files = []
-
-        self.browseButton.clicked.connect(self.browse_files)
-        self.uploadButton.clicked.connect(self.handle_upload)
-
-    def browse_files(self):
-        files, _ = QFileDialog.getOpenFileNames(self, "Logo auswählen")
-        if files:
-            self.selected_files = files
-            self.fileListWidget.clear()
-            self.fileListWidget.addItems(files)
-
-    def handle_upload(self):
-        if not self.selected_files:
-            print("Kein Logo ausgewählt")
-            return
-        print(f"Hochgeladen: {self.selected_files[0]}")
-
 
 
 class CEOStNrDialog(QDialog):
@@ -263,13 +231,34 @@ class MainWindow(QMainWindow):
         if self.le_search_positionen:
             self.le_search_positionen.textChanged.connect(self.on_search_positionen_text_changed)
 
-
     def open_logo_picker(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Logo auswählen", "", "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Logo auswählen",
+            "",
+            "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)"
+        )
         if file_path:
-            print("Ausgewähltes Logo:", file_path)
-            # Optional: Weiterverarbeitung, z. B. speichern oder anzeigen
-
+            self.selected_files = [file_path]
+            if hasattr(self, "fileListWidget"):
+                self.fileListWidget.clear()
+                self.fileListWidget.addItem(file_path)
+            self.file_path = file_path
+            self.file_name = os.path.basename(file_path)
+            with open(file_path, "rb") as f:
+                self.logo_data = f.read()
+            mime_type, _ = mimetypes.guess_type(file_path)
+            self.mime_type = mime_type
+            print("Bild gewählt:", self.file_name)
+            print("MIME-Type:", self.mime_type)
+        else:
+            self.selected_files = []
+            self.file_path = None
+            self.file_name = None
+            self.logo_data = None
+            self.mime_type = None
+            if hasattr(self, "fileListWidget"):
+                self.fileListWidget.clear()
 
     def init_tables(self):
         """
@@ -441,6 +430,7 @@ class MainWindow(QMainWindow):
                 items = [QStandardItem(str(cell)) for cell in row]
                 model.appendRow(items)
             self.tv_detail_dienstleister.setModel(model)
+            self.show_service_provider_logo(service_provider_id)
         except Exception as e:
             error_message = f"Error while loading CEO details: {format_exception(e)}"
             print(error_message)
@@ -627,80 +617,156 @@ class MainWindow(QMainWindow):
                         )
                     )
 
+
+
                 elif current_tab == "tab_dienstleister":
+
                     # 1. Adresse speichern
+
                     address_data = rel_data.get("addresses", {})
+
                     cur.execute(
+
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
+
                         (
+
                             address_data.get("tv_dienstleister_Strasse", ""),
+
                             address_data.get("tv_dienstleister_Hausnummer", ""),
+
                             address_data.get("tv_dienstleister_Stadt", ""),
+
                             address_data.get("tv_dienstleister_PLZ", ""),
+
                             address_data.get("tv_dienstleister_Land", ""),
+
                             date.today().strftime("%d.%m.%Y")
+
                         )
+
                     )
+
                     address_id = cur.lastrowid
 
-                    # 2. Logo speichern (optional, falls vorhanden)
-                    logo_id = 1  # Setze ggf. richtige ID oder lass es bei Pflichtfeldern
-                    # Beispiel: logo_id = deine_logo_speicherfunktion()
-
-                    # 3. Dienstleister speichern
-                    cur.execute(
-                        "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (
-                            main_data["tv_dienstleister_UStIdNr"],
-                            main_data.get("tv_dienstleister_Mobiltelefonnummer", ""),
-                            main_data["tv_dienstleister_Unternehmensname"],
-                            main_data.get("tv_dienstleister_Faxnummer", ""),
-                            main_data["tv_dienstleister_Webseite"],
-                            main_data["tv_dienstleister_Email"],
-                            main_data["tv_dienstleister_Telefonnummer"],
-                            date.today().strftime("%d.%m.%Y"),
-                            address_id,
-                            logo_id
+                    # 2. Logo speichern
+                    logo_id = None
+                    if (self.file_name
+                            and self.logo_data
+                            and len(self.logo_data) > 0):
+                        # Nutzer hat ein Logo ausgewählt
+                        logo_file_name = self.file_name
+                        logo_data = self.logo_data
+                        file_type = self.mime_type or ""
+                        cur.execute(
+                            "INSERT INTO LOGOS (FILE_NAME, LOGO_BINARY, MIME_TYPE, CREATION_DATE) VALUES (?, ?, ?, ?)",
+                            (
+                                logo_file_name,
+                                logo_data,
+                                file_type,
+                                date.today().strftime("%d.%m.%Y"),
+                            )
                         )
+                        logo_id = cur.lastrowid
+
+                    else:
+
+                        show_error(self, "Fehler", "Fehler beim Speichern des Logos")
+
+                    # 3. Dienstleister speichern (LOGO_ID als FK)
+
+                    cur.execute(
+
+                        "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+
+                        (
+
+                            main_data["tv_dienstleister_UStIdNr"],
+
+                            main_data.get("tv_dienstleister_Mobiltelefonnummer", ""),
+
+                            main_data["tv_dienstleister_Unternehmensname"],
+
+                            main_data.get("tv_dienstleister_Faxnummer", ""),
+
+                            main_data["tv_dienstleister_Webseite"],
+
+                            main_data["tv_dienstleister_Email"],
+
+                            main_data["tv_dienstleister_Telefonnummer"],
+
+                            date.today().strftime("%d.%m.%Y"),
+
+                            address_id,
+
+                            logo_id
+
+                        )
+
                     )
 
                     # 4. Bank prüfen und speichern
+
                     bank_data = rel_data.get("accounts", {})
+
                     bic = bank_data.get("tv_dienstleister_BIC", "")
+
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
+
                     iban = bank_data.get("tv_dienstleister_IBAN", "")
+
                     if bic and bank_name:
+
                         cur.execute("SELECT COUNT(*) FROM BANK WHERE BIC=?", (bic,))
+
                         if cur.fetchone()[0] == 0:
                             cur.execute("INSERT INTO BANK (BIC, BANK_NAME) VALUES (?, ?)", (bic, bank_name))
-                    # 5. Account speichern
+
                     if iban and bic:
                         cur.execute(
+
                             "INSERT INTO ACCOUNT (IBAN, FK_BANK_ID, FK_UST_IDNR) VALUES (?, ?, ?)",
+
                             (iban, bic, main_data["tv_dienstleister_UStIdNr"])
+
                         )
 
-                    # 6. CEOs
+                    # 5. CEOs
+
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
+
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
+
                     if ceo_names:
-                        # Steuernummern mit Dialog abfragen
+
                         ceo_dlg = CEOStNrDialog(ceo_names, self)
+
                         if ceo_dlg.exec() == QDialog.DialogCode.Accepted:
+
                             ceo_stnr_map = ceo_dlg.get_ceo_st_numbers()
+
                             for ceo_name, st_nr in ceo_stnr_map.items():
+
                                 if ceo_name and st_nr:
-                                    # CEO speichern, falls noch nicht vorhanden
+
                                     cur.execute("SELECT COUNT(*) FROM CEO WHERE ST_NR=?", (st_nr,))
+
                                     if cur.fetchone()[0] == 0:
-                                        cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)", (st_nr, ceo_name))
-                                    # REF_LABOR_COST speichern
+                                        cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)",
+                                                    (st_nr, ceo_name))
+
                                     cur.execute(
+
                                         "INSERT INTO REF_LABOR_COST (FK_ST_NR, FK_UST_IDNR) VALUES (?, ?)",
+
                                         (st_nr, main_data["tv_dienstleister_UStIdNr"])
+
                                     )
+
                         else:
+
                             show_error(self, "Abbruch", "Speichern ohne Steuernummern nicht möglich.")
+
                             return
                 elif current_tab == "tab_positionen":
                     # Position speichern
@@ -1063,15 +1129,12 @@ class MainWindow(QMainWindow):
             show_error(self, "Fehler beim Laden der Positionen", str(e))
 
     def search_entries(self):
-        """
-        Durchsucht alle Spalten des aktuellen Tabs nach dem Suchtext aus tb_search_entries.
-        """
         search_text_widget = self.findChild(QLineEdit, "tb_search_entries")
         if not search_text_widget:
             return
         search_text = search_text_widget.text().strip()
         if not search_text:
-            # Wenn kein Suchtext, Tabelle ganz normal laden
+            # Wenn kein Suchtext, Tabelle normal laden
             current_tab = self.tabWidget.currentWidget().objectName()
             table_view_name = None
             db_view_name = None
@@ -1085,7 +1148,12 @@ class MainWindow(QMainWindow):
                     self.load_table(table_view, db_view_name)
             return
 
-        # Suche
+        # --- Erweiterte Suche mit mehreren Begriffen ---
+        # Split nach Leerzeichen, entferne leere Strings
+        search_terms = [term.strip() for term in search_text.split() if term.strip()]
+        if not search_terms:
+            return
+
         current_tab = self.tabWidget.currentWidget().objectName()
         table_view_name = None
         db_view_name = None
@@ -1099,10 +1167,16 @@ class MainWindow(QMainWindow):
         try:
             # Spaltennamen holen
             _, columns = fetch_all(f"SELECT * FROM {db_view_name} LIMIT 1")
-            # Query bauen: alle Spalten mit LIKE durchsuchen (als OR)
-            like_clauses = [f'"{col}" LIKE ?' for col in columns]
-            sql = f'SELECT * FROM {db_view_name} WHERE ' + " OR ".join(like_clauses)
-            params = [f'%{search_text}%'] * len(columns)
+            # Baue WHERE: für jedes Suchwort muss es in mindestens einer Spalte vorkommen
+            like_clauses = []
+            params = []
+            for term in search_terms:
+                or_parts = [f'"{col}" LIKE ?' for col in columns]
+                like_clauses.append('(' + ' OR '.join(or_parts) + ')')
+                params.extend([f'%{term}%'] * len(columns))
+            # Alle Begriffe müssen irgendwo passen: UND-Verknüpfung
+            where_clause = ' AND '.join(like_clauses)
+            sql = f'SELECT * FROM {db_view_name} WHERE {where_clause}'
             data, _ = fetch_all(sql, tuple(params))
 
             # Anzeige aktualisieren
@@ -1282,3 +1356,31 @@ class MainWindow(QMainWindow):
             table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         except Exception as e:
             show_error(self, "Suchfehler", str(e))
+
+    def show_service_provider_logo(self, ust_idnr):
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT l.LOGO_BINARY
+                FROM SERVICE_PROVIDER s
+                JOIN LOGOS l ON s.FK_LOGO_ID = l.ID
+                WHERE s.UST_IDNR = ?
+            """, (ust_idnr,))
+            row = cur.fetchone()
+            label = self.findChild(QLabel, "lbl_dienstleister_logo")
+            if label:
+                if row and row[0]:
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(row[0])
+                    # Skaliere das Bild so, dass das Seitenverhältnis erhalten bleibt:
+                    scaled_pixmap = pixmap.scaled(
+                        label.width(),
+                        label.height(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    label.setPixmap(scaled_pixmap)
+                    label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                    label.setScaledContents(False)
+                else:
+                    label.clear()

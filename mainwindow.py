@@ -1,16 +1,15 @@
 # This file contains the MainWindow class for the application
 import sqlite3
-
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
     QDialog, QFormLayout, QListWidget, QFileDialog
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
-from PyQt6.QtCore import QModelIndex, Qt
+from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
 from datetime import date
 import sys
 from database import get_next_primary_key
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME
 from utils import show_error, format_exception, show_info
 from database import fetch_all
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
@@ -226,7 +225,17 @@ class MainWindow(QMainWindow):
 
         self.findChild(QPushButton, "btn_eintrag_loeschen").clicked.connect(self.on_entry_delete)
 
+        # Suche: Button und Enter-Key
 
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.tb_search_entries.textChanged.connect(self.on_search_text_changed)
+
+        self.btn_rechnung_exportieren = self.findChild(QPushButton, "btn_rechnung_exportieren")
+        if self.btn_rechnung_exportieren:
+            self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
+        self.tabWidget.currentChanged.connect(self.update_export_button_state)
+        self.update_export_button_state(self.tabWidget.currentIndex())
 
 
     def open_logo_picker(self):
@@ -234,6 +243,7 @@ class MainWindow(QMainWindow):
         if file_path:
             print("Ausgewähltes Logo:", file_path)
             # Optional: Weiterverarbeitung, z. B. speichern oder anzeigen
+
 
     def init_tables(self):
         """
@@ -418,7 +428,7 @@ class MainWindow(QMainWindow):
             # Nur Positionen dieser Rechnung laden
             query = """
                 SELECT
-                    "Positions-ID",
+                    PositionsID,
                     Bezeichnung,
                     Beschreibung,
                     Einzelpreis,
@@ -1033,3 +1043,151 @@ class MainWindow(QMainWindow):
             self.tv_rechnungen_form_positionen.resizeColumnsToContents()
         except Exception as e:
             show_error(self, "Fehler beim Laden der Positionen", str(e))
+
+    def search_entries(self):
+        """
+        Durchsucht alle Spalten des aktuellen Tabs nach dem Suchtext aus tb_search_entries.
+        """
+        search_text_widget = self.findChild(QLineEdit, "tb_search_entries")
+        if not search_text_widget:
+            return
+        search_text = search_text_widget.text().strip()
+        if not search_text:
+            # Wenn kein Suchtext, Tabelle ganz normal laden
+            current_tab = self.tabWidget.currentWidget().objectName()
+            table_view_name = None
+            db_view_name = None
+            for k, v in self.table_mapping.items():
+                if k.replace("tv_", "tab_") == current_tab or k == f"tv_{current_tab.replace('tab_', '')}":
+                    table_view_name = k
+                    db_view_name = v
+            if table_view_name and db_view_name:
+                table_view = self.findChild(QTableView, table_view_name)
+                if table_view:
+                    self.load_table(table_view, db_view_name)
+            return
+
+        # Suche
+        current_tab = self.tabWidget.currentWidget().objectName()
+        table_view_name = None
+        db_view_name = None
+        for k, v in self.table_mapping.items():
+            if k.replace("tv_", "tab_") == current_tab or k == f"tv_{current_tab.replace('tab_', '')}":
+                table_view_name = k
+                db_view_name = v
+        if not db_view_name:
+            return
+
+        try:
+            # Spaltennamen holen
+            _, columns = fetch_all(f"SELECT * FROM {db_view_name} LIMIT 1")
+            # Query bauen: alle Spalten mit LIKE durchsuchen (als OR)
+            like_clauses = [f'"{col}" LIKE ?' for col in columns]
+            sql = f'SELECT * FROM {db_view_name} WHERE ' + " OR ".join(like_clauses)
+            params = [f'%{search_text}%'] * len(columns)
+            data, _ = fetch_all(sql, tuple(params))
+
+            # Anzeige aktualisieren
+            table_view = self.findChild(QTableView, table_view_name)
+            if table_view:
+                model = QStandardItemModel()
+                model.setHorizontalHeaderLabels(columns)
+                for row in data:
+                    items = [QStandardItem(str(cell)) for cell in row]
+                    for item in items:
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    model.appendRow(items)
+                table_view.setModel(model)
+                table_view.resizeColumnsToContents()
+                table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+                table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        except Exception as e:
+            show_error(self, "Suchfehler", str(e))
+
+    # debouncing funktion verhindert performance crashes/probleme
+    def on_search_text_changed(self, text):
+        self.search_timer.stop()
+        self.search_timer.timeout.connect(self.search_entries)
+        self.search_timer.start(DEBOUNCE_TIME)  # DEBOUNCE_TIME warten
+
+    def update_export_button_state(self, index):
+        current_tab = self.tabWidget.widget(index)
+        if not self.btn_rechnung_exportieren:
+            return
+        if current_tab and current_tab.objectName() == "tab_rechnungen":
+            self.btn_rechnung_exportieren.setEnabled(True)
+        else:
+            self.btn_rechnung_exportieren.setEnabled(False)
+
+    def on_rechnung_exportieren_clicked(self):
+        idx = self.tv_rechnungen.currentIndex()
+        if not idx.isValid():
+            show_error(self, "Keine Auswahl", "Bitte zuerst eine Rechnung auswählen!")
+            return
+        invoice_nr = idx.sibling(idx.row(), 0).data()
+
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cur = conn.cursor()
+
+                # Rechnungsdaten
+                cur.execute("SELECT * FROM INVOICES WHERE INVOICE_NR = ?", (invoice_nr,))
+                invoice_row = cur.fetchone()
+                invoice_columns = [desc[0] for desc in cur.description]
+
+                # Kunde
+                cur.execute("""
+                    SELECT c.*, a.*
+                    FROM CUSTOMERS c
+                    LEFT JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID
+                    WHERE c.CUSTID = (SELECT FK_CUSTID FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                customer_row = cur.fetchone()
+                customer_columns = [desc[0] for desc in cur.description]
+
+                # Dienstleister
+                cur.execute("""
+                    SELECT s.*, a.*
+                    FROM SERVICE_PROVIDER s
+                    LEFT JOIN ADDRESSES a ON s.FK_ADDRESS_ID = a.ID
+                    WHERE s.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                provider_row = cur.fetchone()
+                provider_columns = [desc[0] for desc in cur.description]
+
+                # CEOs zum Dienstleister
+                cur.execute("""
+                    SELECT ceo.ST_NR, ceo.CEO_NAME
+                    FROM SERVICE_PROVIDER sp
+                    JOIN REF_LABOR_COST rel ON rel.FK_UST_IDNR = sp.UST_IDNR
+                    JOIN CEO ceo ON rel.FK_ST_NR = ceo.ST_NR
+                    WHERE sp.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                ceos_rows = cur.fetchall()
+                ceos_columns = [desc[0] for desc in cur.description]
+
+                # Positionen
+                cur.execute("""
+                    SELECT p.*
+                    FROM REF_INVOICES_POSITIONS ref
+                    JOIN POSITIONS p ON ref.FK_POSITIONS_POS_ID = p.POS_ID
+                    WHERE ref.FK_INVOICES_INVOICE_NR = ?
+                """, (invoice_nr,))
+                positions_rows = cur.fetchall()
+                positions_columns = [desc[0] for desc in cur.description]
+
+            export_data = [
+                {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
+                {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
+                {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
+                {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
+                {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
+            ]
+
+            print(export_data)
+            show_info(self, "Export", "Rechnungsdaten wurden ins Array geladen (siehe Konsole).")
+            return export_data
+
+        except Exception as e:
+            show_error(self, "Export-Fehler", str(e))
+            return None

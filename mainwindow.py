@@ -1,6 +1,5 @@
 # This file contains the MainWindow class for the application
 import sqlite3
-
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QMessageBox, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
     QDialog, QFormLayout
@@ -195,6 +194,12 @@ class MainWindow(QMainWindow):
         self.search_timer.setSingleShot(True)
         self.tb_search_entries.textChanged.connect(self.on_search_text_changed)
 
+        self.btn_rechnung_exportieren = self.findChild(QPushButton, "btn_rechnung_exportieren")
+        if self.btn_rechnung_exportieren:
+            self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
+        self.tabWidget.currentChanged.connect(self.update_export_button_state)
+        self.update_export_button_state(self.tabWidget.currentIndex())
+
 
 
     def init_tables(self):
@@ -380,7 +385,7 @@ class MainWindow(QMainWindow):
             # Nur Positionen dieser Rechnung laden
             query = """
                 SELECT
-                    "Positions-ID",
+                    PositionsID,
                     Bezeichnung,
                     Beschreibung,
                     Einzelpreis,
@@ -1061,3 +1066,85 @@ class MainWindow(QMainWindow):
         self.search_timer.stop()
         self.search_timer.timeout.connect(self.search_entries)
         self.search_timer.start(DEBOUNCE_TIME)  # DEBOUNCE_TIME warten
+
+    def update_export_button_state(self, index):
+        current_tab = self.tabWidget.widget(index)
+        if not self.btn_rechnung_exportieren:
+            return
+        if current_tab and current_tab.objectName() == "tab_rechnungen":
+            self.btn_rechnung_exportieren.setEnabled(True)
+        else:
+            self.btn_rechnung_exportieren.setEnabled(False)
+
+    def on_rechnung_exportieren_clicked(self):
+        idx = self.tv_rechnungen.currentIndex()
+        if not idx.isValid():
+            show_error(self, "Keine Auswahl", "Bitte zuerst eine Rechnung auswählen!")
+            return
+        invoice_nr = idx.sibling(idx.row(), 0).data()
+
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cur = conn.cursor()
+
+                # Rechnungsdaten
+                cur.execute("SELECT * FROM INVOICES WHERE INVOICE_NR = ?", (invoice_nr,))
+                invoice_row = cur.fetchone()
+                invoice_columns = [desc[0] for desc in cur.description]
+
+                # Kunde
+                cur.execute("""
+                    SELECT c.*, a.*
+                    FROM CUSTOMERS c
+                    LEFT JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID
+                    WHERE c.CUSTID = (SELECT FK_CUSTID FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                customer_row = cur.fetchone()
+                customer_columns = [desc[0] for desc in cur.description]
+
+                # Dienstleister
+                cur.execute("""
+                    SELECT s.*, a.*
+                    FROM SERVICE_PROVIDER s
+                    LEFT JOIN ADDRESSES a ON s.FK_ADDRESS_ID = a.ID
+                    WHERE s.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                provider_row = cur.fetchone()
+                provider_columns = [desc[0] for desc in cur.description]
+
+                # CEOs zum Dienstleister
+                cur.execute("""
+                    SELECT ceo.ST_NR, ceo.CEO_NAME
+                    FROM SERVICE_PROVIDER sp
+                    JOIN REF_LABOR_COST rel ON rel.FK_UST_IDNR = sp.UST_IDNR
+                    JOIN CEO ceo ON rel.FK_ST_NR = ceo.ST_NR
+                    WHERE sp.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+                """, (invoice_nr,))
+                ceos_rows = cur.fetchall()
+                ceos_columns = [desc[0] for desc in cur.description]
+
+                # Positionen
+                cur.execute("""
+                    SELECT p.*
+                    FROM REF_INVOICES_POSITIONS ref
+                    JOIN POSITIONS p ON ref.FK_POSITIONS_POS_ID = p.POS_ID
+                    WHERE ref.FK_INVOICES_INVOICE_NR = ?
+                """, (invoice_nr,))
+                positions_rows = cur.fetchall()
+                positions_columns = [desc[0] for desc in cur.description]
+
+            export_data = [
+                {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
+                {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
+                {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
+                {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
+                {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
+            ]
+
+            print(export_data)
+            show_info(self, "Export", "Rechnungsdaten wurden ins Array geladen (siehe Konsole).")
+            return export_data
+
+        except Exception as e:
+            show_error(self, "Export-Fehler", str(e))
+            return None

@@ -32,7 +32,7 @@ Erstellung einer Rechungserstellungssoftware
     - [ ]    Auswahl von Kunden + anlegen Button
     - [x]    Auswahl von mehreren Positionen + Bulk anlegen Button 18.05.2025
 - [ ]     12.    Form Validation Rules erfassen und umsetzen
-- [ ]     13.    LOGO upload umsetzen
+- [X]     13.    LOGO upload umsetzen
 - [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
 - [ ]     15.    PDF-Vorschau für bestehende Rechnungen
 - [ ] 16.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio 

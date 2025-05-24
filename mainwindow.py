@@ -16,17 +16,21 @@ from database import fetch_all
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos, get_invoice_positions
 
 
-class FileUploader(QDialog):  # <- change QWidget to QDialog
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        uic.loadUi("Qt/file_uploader_list.ui", self)
+class FileUploader(QWidget):
+    def __init__(self):
+        super().__init__()
 
-        self.browseButton: QPushButton = self.findChild(QPushButton, "durchsuchen_button")
-        self.uploadButton: QPushButton = self.findChild(QPushButton, "hochladen_button")
-        self.fileListWidget: QListWidget = self.findChild(QListWidget, "datein_list_widget")
+        self.browseButton = QPushButton("Durchsuchen")
+        self.uploadButton = QPushButton("Hochladen")
+        self.fileListWidget = QListWidget()
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.browseButton)
+        layout.addWidget(self.uploadButton)
+        layout.addWidget(self.fileListWidget)
+        self.setLayout(layout)
 
         self.selected_files = []
-        self.result = None
 
         self.browseButton.clicked.connect(self.browse_files)
         self.uploadButton.clicked.connect(self.handle_upload)
@@ -42,11 +46,9 @@ class FileUploader(QDialog):  # <- change QWidget to QDialog
         if not self.selected_files:
             print("Kein Logo ausgewählt")
             return
-        self.result = self.selected_files[0]
-        self.accept() 
+        print(f"Hochgeladen: {self.selected_files[0]}")
 
-    def get_result(self):
-        return self.result
+
 
 class CEOStNrDialog(QDialog):
     def __init__(self, ceo_names, parent=None):
@@ -203,7 +205,7 @@ class MainWindow(QMainWindow):
         self.de_erstellungsdatum.setDate(date.today())
         self.showMaximized()
         btn_logo_upload = self.findChild(QPushButton, "btn_logo_upload")
-        btn_logo_upload.clicked.connect(self.open_logo_picker)
+        btn_logo_upload.clicked.connect(self.open_logo_picker)  
 
         # Variablen, um die ausgewählten IDs zu speichern
         self.selected_kunde_id = None
@@ -224,21 +226,14 @@ class MainWindow(QMainWindow):
 
         self.findChild(QPushButton, "btn_eintrag_loeschen").clicked.connect(self.on_entry_delete)
 
+
+
+
     def open_logo_picker(self):
-
-        self.picker = FileUploader(self)
-        self.picker.setWindowTitle("Logo auswählen")
-        self.picker.setModal(True)  # Optional: block until closed
-        self.picker.exec() if hasattr(self.picker, "exec") else self.picker.show()
-
-        # Access result after window closes
-        logo_path = self.picker.get_result()
-        if logo_path:
-            print("Logo selected:", logo_path)
-            # Do something with logo_path here
-        else:
-            print("No logo selected.")
-
+        file_path, _ = QFileDialog.getOpenFileName(self, "Logo auswählen", "", "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)")
+        if file_path:
+            print("Ausgewähltes Logo:", file_path)
+            # Optional: Weiterverarbeitung, z. B. speichern oder anzeigen
 
     def init_tables(self):
         """

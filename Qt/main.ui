@@ -72,6 +72,9 @@
       </item>
       <item>
        <spacer name="horizontalSpacerSearchRight">
+       <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+        </property>
         <property name="sizeHint" stdset="0">
          <size>
           <width>40</width>

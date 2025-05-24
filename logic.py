@@ -28,16 +28,3 @@ def get_service_provider_ceos(service_provider_id):
     """
     data, _ = fetch_all(query, (service_provider_id,))
     return data
-
-def get_invoice_positions(invoice_id):
-    """
-    Returns position details for a given invoice.
-    """
-    query = """
-        SELECT p.POS_ID, p.NAME, p.DESCRIPTION, p.UNIT_PRICE, p.AREA
-        FROM POSITIONS AS p
-        JOIN INVOICES AS i ON p.FK_INVOICE_NR = i.INVOICE_NR
-        WHERE i.INVOICE_NR = ?
-    """
-    data, _ = fetch_all(query, (invoice_id,))
-    return data

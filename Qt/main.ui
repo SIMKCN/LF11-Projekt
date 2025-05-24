@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Rechnungsverwaltung</string>
+   <string>Invoice Manager</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../data/app-icon.ico</normaloff>../data/app-icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayoutCentral">

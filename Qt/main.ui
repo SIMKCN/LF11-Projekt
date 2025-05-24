@@ -72,8 +72,8 @@
       </item>
       <item>
        <spacer name="horizontalSpacerSearchRight">
-       <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -91,6 +91,9 @@
        <layout class="QVBoxLayout" name="buttonColumnLayout">
         <item>
          <spacer name="buttonColSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
           <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
@@ -201,7 +204,7 @@
             <item>
              <widget class="QTableView" name="tv_rechnungen">
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -211,7 +214,7 @@
             <item>
              <widget class="QTableView" name="tv_detail_rechnungen">
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -240,10 +243,33 @@
              <layout class="QVBoxLayout" name="vertical_layout_">
               <item>
                <layout class="QGridLayout" name="gridLayout">
-                <item row="1" column="1">
+                <item row="1" column="0">
                  <layout class="QFormLayout" name="rechnungenForm">
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="btn_close_rechnung_hinzufuegen">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset>
+                      <normaloff>icons/x.png</normaloff>icons/x.png</iconset>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="lbl_rechnungsnummer">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>Rechnungsnummer</string>
                     </property>
@@ -261,6 +287,12 @@
                   </item>
                   <item row="2" column="0">
                    <widget class="QLabel" name="lbl_erstellungsdatum">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>Erstellungsdatum</string>
                     </property>
@@ -278,6 +310,12 @@
                   </item>
                   <item row="3" column="0">
                    <widget class="QLabel" name="lbl_lohnkosten">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>Lohnkosten</string>
                     </property>
@@ -294,10 +332,19 @@
                     <property name="suffix">
                      <string> €</string>
                     </property>
+                    <property name="maximum">
+                     <double>100000000.000000000000000</double>
+                    </property>
                    </widget>
                   </item>
                   <item row="4" column="0">
                    <widget class="QLabel" name="lbl_mwst_lohnkosten">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>Mw.St. Lohnkosten</string>
                     </property>
@@ -314,76 +361,99 @@
                     <property name="suffix">
                      <string> %</string>
                     </property>
+                    <property name="maximum">
+                     <double>100.000000000000000</double>
+                    </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
-                   <widget class="QTableView" name="tv_rechnungen_form_kunde"/>
-                  </item>
-                  <item row="6" column="1">
-                   <widget class="QTableView" name="tv_rechnungen_form_dienstleister"/>
-                  </item>
-                  <item row="7" column="0">
-                   <widget class="QPushButton" name="btn_kunden_anlegen">
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="lbl_vat_Positionen">
                     <property name="sizePolicy">
-                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
+                    <property name="text">
+                     <string>Mw.St. Positionen</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QDoubleSpinBox" name="dsb_mwst_positionen">
                     <property name="minimumSize">
                      <size>
-                      <width>10</width>
-                      <height>10</height>
-                     </size>
-                    </property>
-                    <property name="maximumSize">
-                     <size>
-                      <width>20</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                    <property name="baseSize">
-                     <size>
                       <width>0</width>
-                      <height>0</height>
+                      <height>24</height>
                      </size>
                     </property>
-                    <property name="text">
-                     <string/>
+                    <property name="suffix">
+                     <string> %</string>
                     </property>
-                    <property name="icon">
-                     <iconset>
-                      <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+                    <property name="maximum">
+                     <double>100.000000000000000</double>
                     </property>
                    </widget>
                   </item>
-                  <item row="7" column="1">
-                   <widget class="QPushButton" name="btn_dienstleister_anlegen">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="maximumSize">
-                     <size>
-                      <width>20</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                    <property name="text">
-                     <string/>
-                    </property>
-                    <property name="icon">
-                     <iconset>
-                      <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
-                    </property>
-                   </widget>
+                  <item row="6" column="0" colspan="2">
+                   <layout class="QGridLayout" name="gridLayout_3">
+                    <item row="1" column="0">
+                     <widget class="QTableView" name="tv_rechnungen_form_kunde"/>
+                    </item>
+                    <item row="3" column="0" colspan="2">
+                     <widget class="QTableView" name="tv_rechnungen_form_positionen"/>
+                    </item>
+                    <item row="0" column="0">
+                     <widget class="QLineEdit" name="tb_search_kunden">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>24</height>
+                       </size>
+                      </property>
+                      <property name="placeholderText">
+                       <string>Suche nach Kunden</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QTableView" name="tv_rechnungen_form_dienstleister"/>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="tb_search_dienstleister">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>24</height>
+                       </size>
+                      </property>
+                      <property name="placeholderText">
+                       <string>Suche nach Dienstleistern</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0" colspan="2">
+                     <widget class="QLineEdit" name="tb_search_positionen">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>24</height>
+                       </size>
+                      </property>
+                      <property name="placeholderText">
+                       <string>Suche nach Positionen</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </item>
-                  <item row="8" column="0" colspan="2">
-                   <widget class="QTableView" name="tv_rechnungen_form_positionen"/>
-                  </item>
-                  <item row="9" column="0">
+                  <item row="7" column="0">
                    <widget class="QPushButton" name="btn_positionen_anlegen">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -406,33 +476,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="btn_close_rechnung_hinzufuegen">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="text">
-                     <string/>
-                    </property>
-                    <property name="icon">
-                     <iconset>
-                      <normaloff>icons/x.png</normaloff>icons/x.png</iconset>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="QLabel" name="lbl_vat_Positionen">
-                    <property name="text">
-                     <string>Mw.St. Positionen</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="1">
-                   <widget class="QDoubleSpinBox" name="dsb_mwst_positionen"/>
-                  </item>
                  </layout>
                 </item>
                </layout>
@@ -451,7 +494,7 @@
           <item>
            <widget class="QTableView" name="tv_kunden">
             <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>
@@ -720,8 +763,11 @@
             </item>
             <item>
              <spacer name="kundenFormSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
               <property name="sizeType">
-               <enum>QSizePolicy::Fixed</enum>
+               <enum>QSizePolicy::Policy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -745,7 +791,7 @@
             <item>
              <widget class="QTableView" name="tv_dienstleister">
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -755,7 +801,7 @@
             <item>
              <widget class="QTableView" name="tv_detail_dienstleister">
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
               </property>
               <property name="sortingEnabled">
                <bool>true</bool>
@@ -768,21 +814,222 @@
            <layout class="QVBoxLayout" name="dienstleisterFormColumn">
             <item>
              <layout class="QGridLayout" name="dienstleisterForm">
-              <item row="1" column="0">
-               <widget class="QLabel" name="lbl_unternehmen">
-                <property name="minimumSize">
-                 <size>
-                  <width>90</width>
-                  <height>20</height>
-                 </size>
+              <item row="5" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox_4">
+                <property name="title">
+                 <string>Bankverbindung</string>
                 </property>
-                <property name="text">
-                 <string>Unternehmen</string>
-                </property>
+                <layout class="QGridLayout" name="gridDienstAnschrift_2">
+                 <item row="0" column="2">
+                  <widget class="QLineEdit" name="tv_dienstleister_IBAN">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_dienst_bank">
+                   <property name="text">
+                    <string>Kreditinstitut</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLabel" name="lbl_dienst_bic">
+                   <property name="text">
+                    <string>BIC</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_dienst_iban">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>IBAN</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2" colspan="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Kreditinstitut">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="4">
+                  <widget class="QLineEdit" name="tv_dienstleister_BIC">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item row="2" column="1" colspan="3">
                <widget class="QLineEdit" name="tv_dienstleister_CEOS">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="lbl_ustidnr">
+                <property name="text">
+                 <string>USt - IdNr.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="lbl_dienst_ceo">
+                <property name="text">
+                 <string>Geschäftsführer*innen</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox">
+                <property name="title">
+                 <string>Kontaktdaten</string>
+                </property>
+                <layout class="QGridLayout" name="gridKontakt">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_dienst_tel">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Telefonnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Telefonnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QLabel" name="lbl_dienst_email">
+                   <property name="minimumSize">
+                    <size>
+                     <width>80</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>E-Mail</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Email">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="lbl_dienst_mob">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Mobiltelefonnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Mobiltelefonnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QLabel" name="lbl_dienst_webseite">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Webseite</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="3">
+                  <widget class="QLineEdit" name="tv_dienstleister_Webseite">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="lbl_dienst_fax">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Faxnummer</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="tv_dienstleister_Faxnummer">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>24</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="tv_dienstleister_Unternehmensname">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -798,6 +1045,19 @@
                   <width>0</width>
                   <height>24</height>
                  </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="lbl_unternehmen">
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Unternehmen</string>
                 </property>
                </widget>
               </item>
@@ -950,246 +1210,75 @@
                 </layout>
                </widget>
               </item>
-              <item row="3" column="0" colspan="4">
-               <widget class="QGroupBox" name="groupBox">
+              <item row="6" column="0" colspan="4">
+               <widget class="QGroupBox" name="groupBox_5">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="title">
-                 <string>Kontaktdaten</string>
+                 <string>Weitere Informationen</string>
                 </property>
-                <layout class="QGridLayout" name="gridKontakt">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_dienst_tel">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Telefonnummer</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_Telefonnummer">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2">
-                  <widget class="QLabel" name="lbl_dienst_email">
-                   <property name="minimumSize">
-                    <size>
-                     <width>80</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>E-Mail</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_Email">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_dienst_mob">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Mobiltelefonnummer</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_Mobiltelefonnummer">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="2">
-                  <widget class="QLabel" name="lbl_dienst_webseite">
-                   <property name="minimumSize">
-                    <size>
-                     <width>70</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Webseite</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_Webseite">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="lbl_dienst_fax">
-                   <property name="minimumSize">
-                    <size>
-                     <width>70</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Faxnummer</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="tv_dienstleister_Faxnummer">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="lbl_ustidnr">
-                <property name="text">
-                 <string>USt - IdNr.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="tv_dienstleister_Unternehmensname">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>24</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="lbl_dienst_ceo">
-                <property name="text">
-                 <string>Geschäftsführer*innen</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0" colspan="4">
-               <widget class="QGroupBox" name="groupBox_4">
-                <property name="title">
-                 <string>Bankverbindung</string>
-                </property>
-                <layout class="QGridLayout" name="gridDienstAnschrift_2">
-                 <item row="0" column="3">
-                  <widget class="QLabel" name="lbl_dienst_bic">
-                   <property name="text">
-                    <string>BIC</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_dienst_iban">
-                   <property name="minimumSize">
-                    <size>
-                     <width>70</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>IBAN</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_dienst_bank">
-                   <property name="text">
-                    <string>Kreditinstitut</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2">
-                  <widget class="QLineEdit" name="tv_dienstleister_IBAN">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="4">
-                  <widget class="QLineEdit" name="tv_dienstleister_BIC">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="2" colspan="3">
-                  <widget class="QLineEdit" name="tv_dienstleister_Kreditinstitut">
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>24</height>
-                    </size>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
+                <widget class="QPushButton" name="btn_logo_upload">
+                 <property name="geometry">
+                  <rect>
+                   <x>10</x>
+                   <y>30</y>
+                   <width>161</width>
+                   <height>24</height>
+                  </rect>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Firmenlogo hochladen</string>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="lbl_dienstleister_logo">
+                 <property name="geometry">
+                  <rect>
+                   <x>180</x>
+                   <y>20</y>
+                   <width>401</width>
+                   <height>150</height>
+                  </rect>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>150</width>
+                   <height>150</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
                </widget>
               </item>
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_5">
-              <property name="title">
-               <string>Weitere Informationen</string>
-              </property>
-              <widget class="QPushButton" name="btn_logo_upload">
-               <property name="geometry">
-                <rect>
-                 <x>10</x>
-                 <y>30</y>
-                 <width>161</width>
-                 <height>24</height>
-                </rect>
-               </property>
-               <property name="text">
-                <string>Firmenlogo hochladen</string>
-               </property>
-              </widget>
-             </widget>
-            </item>
-            <item>
              <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
               <property name="sizeType">
-               <enum>QSizePolicy::Fixed</enum>
+               <enum>QSizePolicy::Policy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -1211,7 +1300,7 @@
           <item>
            <widget class="QTableView" name="tv_positionen">
             <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
+             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
             </property>
             <property name="sortingEnabled">
              <bool>true</bool>
@@ -1365,8 +1454,11 @@
             </item>
             <item>
              <spacer name="positionenFormSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
               <property name="sizeType">
-               <enum>QSizePolicy::Fixed</enum>
+               <enum>QSizePolicy::Policy::Fixed</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>

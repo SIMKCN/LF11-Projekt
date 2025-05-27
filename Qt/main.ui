@@ -62,19 +62,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="lbl_eintrag_erstellt_datum">
-        <property name="minimumSize">
-         <size>
-          <width>170</width>
-          <height>24</height>
-         </size>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="horizontalSpacerSearchRight">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
@@ -196,7 +183,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">

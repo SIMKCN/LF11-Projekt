@@ -1,5 +1,3 @@
-# This is the entry point of the application
-
 import sys
 from PyQt6.QtWidgets import QApplication
 from mainwindow import MainWindow

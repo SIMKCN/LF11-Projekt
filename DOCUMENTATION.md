@@ -1,6 +1,6 @@
-# ![Projektlogo](./data/app_logo2.png)
+# ![Projektlogo](./data/app_logo.png)
 
-# LF11: Invoice Manager
+# LF11: Rechnungsverwaltung
 
 ## Anwenderdokumentation & Entwicklungsdokumentation
 

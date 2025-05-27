@@ -1,22 +1,79 @@
 # IMPORT other Packages
+import io
 import mimetypes
 import os
 import sqlite3
 from datetime import date
 import sys
+from io import BytesIO
+
+from xml.dom import minidom
+import xml.etree.ElementTree as ET
+
+import pyzipper
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+
 # IMPORT PyQt6 Packages
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
-    QDialog, QFormLayout, QFileDialog
+    QDialog, QFormLayout, QFileDialog, QMessageBox, QVBoxLayout
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QTextDocument
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, APPLICATION_WORKING_PATH, EXPORT_OUTPUT_PATH
 from utils import show_error, format_exception, show_info
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos
+
+class PasswordDialog(QDialog):
+    def __init__(self, min_length=4, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Passwort festlegen")
+        self.min_length = min_length
+        self.password = None  # Rückgabewert
+
+        self.label1 = QLabel("Passwort:")
+        self.input1 = QLineEdit()
+        self.input1.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.label2 = QLabel("Passwort bestätigen:")
+        self.input2 = QLineEdit()
+        self.input2.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.button_ok = QPushButton("OK")
+        self.button_ok.clicked.connect(self.check_password)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.label1)
+        layout.addWidget(self.input1)
+        layout.addWidget(self.label2)
+        layout.addWidget(self.input2)
+        layout.addWidget(self.button_ok)
+        self.setLayout(layout)
+
+    def check_password(self):
+        pwd1 = self.input1.text()
+        pwd2 = self.input2.text()
+
+        if pwd1 != pwd2:
+            QMessageBox.warning(self, "Fehler", "Die Passwörter stimmen nicht überein.")
+            return
+
+        if len(pwd1) < self.min_length:
+            QMessageBox.warning(self, "Fehler", f"Das Passwort muss mindestens {self.min_length} Zeichen lang sein.")
+            return
+
+        self.password = pwd1
+        self.accept()  # Dialog schließen
+
+    def get_password(self):
+        return self.password
 
 # Class :QDialog: for gathering StNr of CEOs
 class CEOStNrDialog(QDialog):
@@ -167,6 +224,7 @@ class MainWindow(QMainWindow):
         self.selected_kunde_id = None
         self.selected_dienstleister_id = None
         self.init_tv_rechnungen_form_tabellen()
+        os.makedirs(EXPORT_OUTPUT_PATH, exist_ok=True)
 
         # Connect Signal for Tab Change
         self.tabWidget.currentChanged.connect(self.on_tab_changed)
@@ -1178,20 +1236,60 @@ class MainWindow(QMainWindow):
                 {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
                 {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
             ]
+            ##########################################
+            # XML ausgeben als Datei
+            print(export_data)
 
-            # === PDF-Export Teil ===
-            save_path, _ = QFileDialog.getSaveFileName(self, "Rechnung als PDF speichern", "", "PDF-Dateien (*.pdf)")
-            if not save_path:
-                return
+            zip_output_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "ZIP-Datei speichern unter",
+                filter="ZIP-Dateien (*.zip);;Alle Dateien (*)",
+                directory="export.zip"  # Vorschlagsname
+            )
 
-            html = self.build_invoice_html(export_data)
-            doc = QTextDocument()
-            doc.setHtml(html)
-            printer = QPrinter()
-            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
-            printer.setOutputFileName(save_path)
-            doc.print(printer)
-            show_info(self, "Export", f"Rechnung erfolgreich als PDF exportiert: {save_path}")
+            xml_string = self.build_invoice_xml(export_data)
+
+            fk_logo_id = next(
+                (entry["service_provider"]["FK_LOGO_ID"] for entry in export_data if "service_provider" in entry),
+                None
+            )
+
+            logo_bytes = None
+            if fk_logo_id:
+                cursor = conn.cursor()
+                cursor.execute("SELECT LOGO_BINARY FROM LOGOS WHERE ID = ?", (fk_logo_id,))
+                result = cursor.fetchone()
+                if result and result[0] is not None:
+                    logo_bytes = result[0]
+
+            conn.close()
+
+            with open(EXPORT_OUTPUT_PATH + r"\rechnung.xml", "w", encoding="utf-8") as f:
+                f.write(xml_string)
+
+            self.create_invoice_pdf(xml_string, logo_bytes, EXPORT_OUTPUT_PATH + r"\rechnung.pdf")
+
+            dialog = PasswordDialog(min_length=4)
+            if dialog.exec():
+                passwort = dialog.get_password()
+                with pyzipper.AESZipFile(zip_output_path,
+                                         'w',  # ← 'w' = Write-Modus = immer überschreiben
+                                         compression=pyzipper.ZIP_LZMA,
+                                         encryption=pyzipper.WZ_AES) as zip_file:
+
+                    zip_file.setpassword(passwort.encode("utf-8"))  # wichtig: bytes
+
+                    files_to_add = [
+                        ("rechnung.xml", os.path.join(EXPORT_OUTPUT_PATH, "rechnung.xml")),
+                        ("rechnung.pdf", os.path.join(EXPORT_OUTPUT_PATH, "rechnung.pdf"))
+                    ]
+
+                    for arcname, filepath in files_to_add:
+                        zip_file.write(filepath, arcname=arcname)
+
+                print(f"{zip_output_path} wurde erstellt und mit Passwort geschützt.")
+            else:
+                show_info(self, "Abgebrochen", "Der Export wurde abgebrochen.")
 
         except Exception as e:
             show_error(self, "Export-Fehler", str(e))
@@ -1326,101 +1424,206 @@ class MainWindow(QMainWindow):
                 else:
                     label.clear()
 
-    def build_invoice_html(self, export_data):
-        invoice = export_data[0]['invoice']
-        customer = export_data[1]['customer']
-        service_provider = export_data[2]['service_provider']
-        ceos = export_data[3]['ceos']
-        positions = export_data[4]['positions']
+    def build_invoice_xml(self, export_data):
+        root = ET.Element("invoice_data")
 
-        # Summen berechnen (anpassen je nach Feldern in deiner Datenbank)
-        total_net = sum(float(pos.get("UNIT_PRICE", 0)) * float(pos.get("AREA", 0)) for pos in positions)
-        vat = float(invoice.get('VAT_RATE_LABOR', 19))
-        total_vat = total_net * vat / 100
-        total_gross = total_net + total_vat
+        for entry in export_data:
+            for key, value in entry.items():
+                section = ET.SubElement(root, key)
 
-        # Positionen als HTML-Tabelle
-        pos_rows = ""
-        for idx, pos in enumerate(positions, 1):
-            pos_rows += f"""
-            <tr>
-                <td style="padding:4px;">{idx}</td>
-                <td style="padding:4px;">
-                    <b>{pos.get("NAME", "")}</b><br>
-                    <span style="font-size:10pt;">{pos.get("DESCRIPTION", "")}</span>
-                </td>
-                <td style="padding:4px;text-align:right;">{pos.get("AREA", "")} m&sup2;</td>
-                <td style="padding:4px;text-align:right;">{float(pos.get("UNIT_PRICE", 0)):.2f} &euro;</td>
-                <td style="padding:4px;text-align:right;">{float(pos.get("AREA", 0)) * float(pos.get("UNIT_PRICE", 0)):.2f} &euro;</td>
-            </tr>
-            """
+                if isinstance(value, list):
+                    for item in value:
+                        item_el = ET.SubElement(section, key[:-1])  # z. B. ceo aus ceos
+                        for sub_key, sub_val in item.items():
+                            ET.SubElement(item_el, sub_key).text = str(sub_val)
 
-        # CEOs als Aufzählung, falls gewünscht
-        ceo_rows = "<br>".join(f"{ceo['CEO_NAME']} (St.-Nr.: {ceo['ST_NR']})" for ceo in ceos) if ceos else ""
+                elif isinstance(value, dict):
+                    for sub_key, sub_val in value.items():
+                        ET.SubElement(section, sub_key).text = str(sub_val)
 
-        html = f"""
-        <html>
-        <head>
-        <style>
-        body {{ font-family: Arial, sans-serif; font-size: 11pt; }}
-        .header-table td {{ vertical-align:top; }}
-        .summary-table td {{ padding:3px 10px; }}
-        </style>
-        </head>
-        <body>
-        <table width="100%" class="header-table">
-            <tr>
-                <td>
-                    <h2 style="margin-bottom:0;">{service_provider.get('PROVIDER_NAME', '')}</h2>
-                    {service_provider.get('STREET', '')} {service_provider.get('NUMBER', '')}<br>
-                    {service_provider.get('ZIP', '')} {service_provider.get('CITY', '')}
-                </td>
-                <td align="right">
-                    <!-- Firmenlogo kann per <img> eingebunden werden -->
-                </td>
-            </tr>
-        </table>
-        <hr>
-        <table width="100%">
-            <tr>
-                <td>
-                    <b>Rechnung an:</b><br>
-                    {customer.get('FIRST_NAME', '')} {customer.get('LAST_NAME', '')}<br>
-                    {customer.get('STREET', '')} {customer.get('NUMBER', '')}<br>
-                    {customer.get('ZIP', '')} {customer.get('CITY', '')}
-                </td>
-                <td align="right">
-                    <b>Rechnung Nr:</b> {invoice.get('INVOICE_NR', '')}<br>
-                    <b>Kundennummer:</b> {customer.get('CUSTID', '')}<br>
-                    <b>Datum:</b> {invoice.get('CREATION_DATE', '')}
-                </td>
-            </tr>
-        </table>
-        <h2>Rechnung</h2>
-        <p>Sehr geehrte/r {customer.get('FIRST_NAME', '')},<br>
-        vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.</p>
-        <table width="100%" border="1" cellspacing="0" cellpadding="3" style="border-collapse:collapse;">
-            <tr style="background:#25722E;color:#fff;">
-                <th>Pos.</th>
-                <th>Bezeichnung</th>
-                <th>Fläche</th>
-                <th>Einzelpreis</th>
-                <th>Preis</th>
-            </tr>
-            {pos_rows}
-        </table>
-        <br>
-        <table align="right" class="summary-table">
-            <tr><td>Nettobetrag:</td><td align="right">{total_net:.2f} &euro;</td></tr>
-            <tr><td>zzgl. MwSt. ({vat:.1f}%):</td><td align="right">{total_vat:.2f} &euro;</td></tr>
-            <tr><td><b>Bruttobetrag:</b></td><td align="right"><b>{total_gross:.2f} &euro;</b></td></tr>
-        </table>
-        <br style="clear:both;">
-        <p>Bitte überweisen Sie den offenen Betrag innerhalb von 14 Tagen auf das bekannte Konto.</p>
-        <p>Mit freundlichen Grüßen<br>{service_provider.get('PROVIDER_NAME', '')}</p>
-        <br>
-        <p><b>Geschäftsführer:</b><br>{ceo_rows}</p>
-        </body>
-        </html>
-        """
-        return html
+                # Extra-Fall für 'service_provider', falls 'logo_id' als separates Feld übergeben wird
+                if key == "service_provider" and isinstance(value, dict):
+                    if "logo_id" in value:
+                        ET.SubElement(section, "FK_LOGO_ID").text = str(value["logo_id"])
+
+        rough_string = ET.tostring(root, encoding='utf-8')
+        reparsed = minidom.parseString(rough_string)
+        xml_string = reparsed.toprettyxml(indent="  ", encoding="utf-8").decode('utf-8')
+
+        return xml_string
+
+    def create_invoice_pdf(self, build_xml_string: str, build_logo_binary: bytes, output_path: str):
+        root = ET.fromstring(build_xml_string)
+
+        invoice = root.find("invoice")
+        customer = root.find("customer")
+        provider = root.find("service_provider")
+        ceo = root.find("ceos/ceo")
+        positions = root.findall("positions/position")
+
+        # Rechnungsdaten
+        invoice_nr = invoice.findtext("INVOICE_NR")
+        invoice_date = invoice.findtext("CREATION_DATE")
+        customer_id = invoice.findtext("FK_CUSTID")
+        labor_cost = float(invoice.findtext("LABOR_COST"))
+        vat_labor = float(invoice.findtext("VAT_RATE_LABOR"))
+        vat_positions = float(invoice.findtext("VAT_RATE_POSITIONS"))
+
+        # Kundendaten
+        customer_name = f"{customer.findtext('FIRST_NAME')} {customer.findtext('LAST_NAME')}"
+        customer_street = f"{customer.findtext('STREET')} {customer.findtext('NUMBER')}"
+        customer_city = f"{customer.findtext('ZIP')} {customer.findtext('CITY')}"
+
+        # Anbieterinformationen
+        provider_name = provider.findtext("PROVIDER_NAME")
+        provider_street = f"{provider.findtext('STREET')} {provider.findtext('NUMBER')}"
+        provider_city = f"{provider.findtext('ZIP')} {provider.findtext('CITY')}"
+        provider_tel = provider.findtext("TELNR")
+        provider_mobil = provider.findtext("MOBILTELNR")
+        provider_fax = provider.findtext("FAXNR")
+        provider_email = provider.findtext("EMAIL")
+        provider_web = provider.findtext("WEBSITE")
+
+        ceo_name = ceo.findtext("CEO_NAME")
+        tax_number = ceo.findtext("ST_NR")
+        ust_id = invoice.findtext("FK_UST_IDNR")
+
+        c = canvas.Canvas(output_path, pagesize=A4)
+        width, height = A4
+
+        def draw_logo():
+            if build_logo_binary:
+                try:
+                    from reportlab.lib.utils import ImageReader
+                    image_stream = io.BytesIO(build_logo_binary)
+                    image = ImageReader(image_stream)
+                    c.drawImage(image, x=40, y=750, width=120, height=60, preserveAspectRatio=True, mask='auto')
+                except Exception as e:
+                    print("Logo konnte nicht gezeichnet werden:", e)
+            else:
+                print("Kein Logo vorhanden oder leer")
+
+        def draw_green_header():
+            c.setFillColor(colors.green)
+            c.rect(0, height - 40, width, 40, fill=True, stroke=False)
+            c.setFillColor(colors.white)
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(20 * mm, height - 25, provider_name)
+
+        def draw_address_blocks():
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 10)
+            y = 245
+            c.drawString(20 * mm, y * mm, customer_name)
+            c.drawString(20 * mm, (y - 5) * mm, customer_street)
+            c.drawString(20 * mm, (y - 10) * mm, customer_city)
+
+            y = 245
+            c.drawRightString(190 * mm, y * mm, provider_name)
+            c.drawRightString(190 * mm, (y - 5) * mm, ceo_name)
+            c.drawRightString(190 * mm, (y - 10) * mm, provider_street)
+            c.drawRightString(190 * mm, (y - 15) * mm, provider_city)
+            c.drawRightString(190 * mm, (y - 20) * mm, f"Mobil: {provider_mobil}")
+            c.drawRightString(190 * mm, (y - 25) * mm, f"Tel.: {provider_tel}")
+            c.drawRightString(190 * mm, (y - 30) * mm, f"Fax: {provider_fax}")
+            c.drawRightString(190 * mm, (y - 35) * mm, f"E-Mail: {provider_email}")
+            c.drawRightString(190 * mm, (y - 40) * mm, f"Web: {provider_web}")
+
+        def draw_invoice_metadata():
+            y = 200
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(20 * mm, y * mm, "Rechnung")
+            c.setFont("Helvetica", 10)
+            c.drawString(20 * mm, (y - 7) * mm, "Rechnungsnummer:")
+            c.drawString(60 * mm, (y - 7) * mm, invoice_nr)
+            c.drawString(20 * mm, (y - 12) * mm, "Kundennummer:")
+            c.drawString(60 * mm, (y - 12) * mm, customer_id)
+            c.drawString(20 * mm, (y - 17) * mm, "Datum:")
+            c.drawString(60 * mm, (y - 17) * mm, invoice_date)
+
+        def draw_items_and_totals():
+            y = 170
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(colors.green)
+            c.drawString(20 * mm, y * mm, "Pos.")
+            c.drawString(30 * mm, y * mm, "Bezeichnung")
+            c.drawRightString(190 * mm, y * mm, "Preis")
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.black)
+
+            y -= 5
+            net_total = 0
+            for idx, pos in enumerate(sorted(positions, key=lambda p: int(p.findtext("POS_ID"))), start=1):
+                name = pos.findtext("NAME")
+                desc = pos.findtext("DESCRIPTION") or ""
+                area = float(pos.findtext("AREA"))
+                price = float(pos.findtext("UNIT_PRICE"))
+                total = area * price
+                net_total += total
+
+                c.drawString(20 * mm, y * mm, f"{idx}")
+                c.drawString(30 * mm, y * mm, name)
+                y -= 5
+                if desc.strip():
+                    for line in desc.splitlines():
+                        c.drawString(35 * mm, y * mm, line.strip())
+                        y -= 5
+                c.drawString(35 * mm, y * mm, f"{area:.2f} m² EP: {price:.2f} €")
+                c.drawRightString(190 * mm, y * mm, f"{total:.2f} €")
+                y -= 10
+
+            vat = net_total * vat_positions / 100
+            gross = net_total + vat
+            vat_labor_amt = labor_cost * vat_labor / 100
+
+            c.drawRightString(170 * mm, y * mm, "Nettobetrag:")
+            c.drawRightString(190 * mm, y * mm, f"{net_total:.2f} €")
+            y -= 5
+            c.drawRightString(170 * mm, y * mm, f"zzgl. {vat_positions:.0f} % MwSt.:")
+            c.drawRightString(190 * mm, y * mm, f"{vat:.2f} €")
+            y -= 5
+            c.setFont("Helvetica-Bold", 10)
+            c.drawRightString(170 * mm, y * mm, "Bruttobetrag:")
+            c.drawRightString(190 * mm, y * mm, f"{gross:.2f} €")
+
+            y -= 10
+            c.setFont("Helvetica", 10)
+            c.drawString(20 * mm, y * mm, f"Im Bruttobetrag sind {labor_cost:.2f} € Lohnkosten enthalten.")
+            y -= 5
+            c.drawString(20 * mm, y * mm, f"Die darin enthaltene Mehrwertsteuer beträgt {vat_labor_amt:.2f} €.")
+            return y
+
+        def draw_footer(y):
+            y -= 10
+            c.drawString(20 * mm, y * mm, "Mit freundlichen Grüßen")
+            y -= 5
+            c.drawString(20 * mm, y * mm, ceo_name)
+            y -= 10
+            c.drawString(20 * mm, y * mm,
+                         "Sie sind verpflichtet, die Rechnung zu Steuerzwecken zwei Jahre lang aufzubewahren.")
+            y -= 5
+            c.drawString(20 * mm, y * mm, "Die aufgeführten Arbeiten wurden ausgeführt im Mai 2025.")
+            y -= 10
+            c.drawString(20 * mm, y * mm, "Bankverbindung:")
+            c.drawString(30 * mm, y * mm, "Sparkasse Karlsruhe Ettlingen")
+            y -= 5
+            c.drawString(30 * mm, y * mm, "IBAN: DE57 6605 0101 0123 4567 89")
+            y -= 5
+            c.drawString(30 * mm, y * mm, "BIC: KARSDE66XXX")
+            y -= 10
+            c.drawString(20 * mm, y * mm, "Geschäftsführung:")
+            c.drawString(60 * mm, y * mm, ceo_name)
+            y -= 5
+            c.drawString(60 * mm, y * mm, f"St.-Nr.: {tax_number}")
+            y -= 5
+            c.drawString(60 * mm, y * mm, f"USt-IdNr.: {ust_id}")
+
+        # Render
+        draw_green_header()
+        draw_logo()
+        draw_address_blocks()
+        draw_invoice_metadata()
+        y_next = draw_items_and_totals()
+        draw_footer(y_next)
+        c.save()
+        return output_path

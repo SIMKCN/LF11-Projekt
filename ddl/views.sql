@@ -63,15 +63,10 @@ JOIN
 DROP VIEW IF EXISTS view_positions_full;
 CREATE VIEW view_positions_full AS
 SELECT
-    p.POS_ID AS PositionsID,                      -- Positions-ID
-    p.CREATION_DATE AS "Erstellungsdatum Position",               -- Erstellungsdatum Position
-    p.NAME AS Bezeichnung,                        -- Positionsname
-    p.DESCRIPTION AS Beschreibung,                 -- Beschreibung
-    p.UNIT_PRICE AS Einzelpreis,                  -- Preis pro Einheit
-    p.AREA AS Flaeche,                        -- Fläche/Menge
-    i.INVOICE_NR AS Rechnungsnummer,                  -- Rechnungsnummer
-    i.CREATION_DATE AS "Erstellungsdatum Rechnung" -- Erstellungsdatum Rechnung
-FROM
-    INVOICES i
-    JOIN REF_INVOICES_POSITIONS ref ON ref.FK_INVOICES_INVOICE_NR = i.INVOICE_NR
-    JOIN POSITIONS p ON p.POS_ID = ref.FK_POSITIONS_POS_ID;
+    POS_ID AS PositionsID,                                 -- Positions-ID
+    CREATION_DATE AS "Erstellungsdatum Position",          -- Erstellungsdatum Position
+    NAME AS Bezeichnung,                                   -- Positionsname
+    DESCRIPTION AS Beschreibung,                           -- Beschreibung
+    UNIT_PRICE AS Einzelpreis,                             -- Preis pro Einheit
+    AREA AS Flaeche,                                       -- Fläche/Menge
+FROM POSITIONS;

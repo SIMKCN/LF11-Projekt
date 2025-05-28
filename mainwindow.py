@@ -224,6 +224,7 @@ class MainWindow(QMainWindow):
         self.selected_kunde_id = None
         self.selected_dienstleister_id = None
         self.init_tv_rechnungen_form_tabellen()
+        self.tv_detail_positionen = self.findChild(QTableView, "tv_detail_positionen")
         os.makedirs(EXPORT_OUTPUT_PATH, exist_ok=True)
 
         # Connect Signal for Tab Change
@@ -300,6 +301,13 @@ class MainWindow(QMainWindow):
 
     # Initializes all table views by loading data from corresponding database views
     def init_tables(self):
+        # Zuerst alle TableViews leeren
+        for table_view_name in self.table_mapping:
+            table_view = self.findChild(QTableView, table_view_name)
+            if table_view:
+                empty_model = QStandardItemModel()
+                table_view.setModel(empty_model)
+        # Dann wie bisher alle Tabellen neu laden
         for table_view_name, db_view_name in self.table_mapping.items():
             table_view = self.findChild(QTableView, table_view_name)
             if table_view:
@@ -321,18 +329,26 @@ class MainWindow(QMainWindow):
             model.setHorizontalHeaderLabels(columns)
             for row in data:
                 items = [QStandardItem(str(cell)) for cell in row]
+                # Erste Spalte rechtsbündig
+                if items:
+                    items[0].setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 for item in items:
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
 
             table_view.setModel(model)
-            table_view.resizeColumnsToContents()
-            table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-            table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
+            # Alle Spalten: Breite automatisch an Inhalt und Header anpassen
             header = table_view.horizontalHeader()
             for col in range(header.count()):
                 header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+            # (Optional: danach Stretch für letzte Spalte, falls du willst:)
+            # header.setStretchLastSection(True)
+
+            table_view.setModel(model)
+            self.adjust_tableview_columns(table_view)
+            table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+            table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
             table_view.selectionModel().currentChanged.connect(
                 lambda current, previous: self.on_row_selected(current, db_view, table_view)
@@ -347,6 +363,7 @@ class MainWindow(QMainWindow):
         try:
             self.temp_positionen = []
             self.load_all_and_temp_positions_for_rechnungsformular()
+            self.findChild(QLabel, "lbl_dienstleister_logo").clear()
             form_field_types = (QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit, QTextBrowser)
             for field in self.findChildren(form_field_types):
                 if field.isVisible():
@@ -384,23 +401,29 @@ class MainWindow(QMainWindow):
     # Handles the event when a row is selected in a table view
     def on_row_selected(self, current: QModelIndex, db_view: str, table_view: QTableView):
         if not current.isValid():
+            # Detailansicht leeren, wenn keine Auswahl
+            if table_view.objectName() == "tv_positionen" and self.tv_detail_positionen:
+                self.tv_detail_positionen.setModel(QStandardItemModel())
             return
 
         try:
             row_id = current.sibling(current.row(), 0).data()
-            if table_view.objectName() in self.detail_mapping:
+            if table_view.objectName() == "tv_positionen":
+                self.load_positions_invoices(row_id)
+            elif table_view.objectName() in self.detail_mapping:
                 if table_view.objectName() == "tv_rechnungen":
+                    # Falls du weiterhin Rechnungspositionen anzeigen willst
                     self.load_invoice_positions(row_id)
                 elif table_view.objectName() == "tv_dienstleister":
                     self.load_service_provider_details(row_id)
-            self.update_form_and_label(current, table_view)
+            self.update_form(current, table_view)
         except Exception as e:
             error_message = f"Error handling row selection in {db_view}: {format_exception(e)}"
             print(error_message)
             show_error(self, "Row Selection Error", error_message)
 
     # Updates the current form and lbl_eintrag_erstellt_datum with the selected row's data
-    def update_form_and_label(self, current: QModelIndex, table_view: QTableView):
+    def update_form(self, current: QModelIndex, table_view: QTableView):
         model = current.model()
         if not model:
             return
@@ -426,25 +449,8 @@ class MainWindow(QMainWindow):
                     widget.setText(value if value is not None else "0,00")
                     widget.setEnabled(False)
 
-            eintrag_datum = None
-            for col in range(model.columnCount()):
-                header = model.headerData(col, Qt.Orientation.Horizontal)
-                if header == "Erstellungsdatum":
-                    eintrag_datum = current.sibling(current.row(), col).data()
-                    break
-
-            lbl_creation_date = self.findChild(QLabel, "lbl_eintrag_erstellt_datum")
-            if lbl_creation_date:
-                lbl_creation_date.setText(f"Erstellt am: {eintrag_datum}" if eintrag_datum else "Erstellt am: N/A")
-                if table_view.objectName() == "tv_dienstleister":
-                    service_provider_id = current.sibling(current.row(), 0).data()
-                    ceo_line_edit = self.findChild(QLineEdit, "tv_dienstleister_CEOS")
-                    if ceo_line_edit:
-                        ceo_names = get_ceos_for_service_provider_form(service_provider_id)
-                        ceo_line_edit.setText(", ".join(ceo_names))
-                        ceo_line_edit.setEnabled(False)
         except Exception as e:
-            error_message = f"Error updating form and label: {format_exception(e)}"
+            error_message = f"Error updating form : {format_exception(e)}"
             print(error_message)
             show_error(self, "Form Update Error", error_message)
 
@@ -458,6 +464,10 @@ class MainWindow(QMainWindow):
                 items = [QStandardItem(str(cell)) for cell in row]
                 model.appendRow(items)
             self.tv_detail_dienstleister.setModel(model)
+            self.tv_detail_dienstleister.setModel(model)
+            self.adjust_tableview_columns(self.tv_detail_dienstleister)
+            self.tv_detail_dienstleister.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+            self.tv_detail_dienstleister.setSelectionMode(QTableView.SelectionMode.SingleSelection)
             self.show_service_provider_logo(service_provider_id)
         except Exception as e:
             error_message = f"Error while loading CEO details: {format_exception(e)}"
@@ -467,31 +477,64 @@ class MainWindow(QMainWindow):
     # Loads all positions for selected row from INVOICE_ID
     def load_invoice_positions(self, invoice_id: str):
         try:
-            # Nur Positionen dieser Rechnung laden
+            # Alle Positionen zu dieser Rechnung laden
             query = """
                 SELECT
-                    PositionsID,
-                    Bezeichnung,
-                    Beschreibung,
-                    Einzelpreis,
-                    Flaeche
-                FROM view_positions_full
-                WHERE Rechnungsnummer = ?
+                    p.POS_ID AS PositionsID,
+                    p.CREATION_DATE AS "Erstellungsdatum Position",
+                    p.NAME AS Bezeichnung,
+                    p.DESCRIPTION AS Beschreibung,
+                    p.UNIT_PRICE AS Einzelpreis,
+                    p.AREA AS Flaeche
+                FROM REF_INVOICES_POSITIONS ref
+                JOIN POSITIONS p ON ref.FK_POSITIONS_POS_ID = p.POS_ID
+                WHERE ref.FK_INVOICES_INVOICE_NR = ?
             """
             data, columns = fetch_all(query, (invoice_id,))
             model = QStandardItemModel()
             model.setHorizontalHeaderLabels(columns)
             for row in data:
                 items = [QStandardItem(str(cell)) for cell in row]
+                for item in items:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
             self.tv_detail_rechnungen.setModel(model)
+            self.adjust_tableview_columns(self.tv_detail_rechnungen)
             self.tv_detail_rechnungen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
             self.tv_detail_rechnungen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
-            self.tv_detail_rechnungen.resizeColumnsToContents()
         except Exception as e:
             error_message = f"Error while loading invoice positions: {format_exception(e)}"
             print(error_message)
             show_error(self, "Database Error", error_message)
+
+    def load_positions_invoices(self, row_id):
+        try:
+            query = """
+                SELECT i.INVOICE_NR AS Rechnungsnummer,
+                       i.CREATION_DATE AS Rechnungsdatum,
+                       i.FK_CUSTID AS Kundennummer,
+                       i.FK_UST_IDNR AS Dienstleister,
+                       i.LABOR_COST AS Lohnkosten
+                FROM REF_INVOICES_POSITIONS ref
+                JOIN INVOICES i ON ref.FK_INVOICES_INVOICE_NR = i.INVOICE_NR
+                WHERE ref.FK_POSITIONS_POS_ID = ?
+            """
+            data, columns = fetch_all(query, (row_id,))
+            model = QStandardItemModel()
+            model.setHorizontalHeaderLabels(columns)
+            for row in data:
+                items = [QStandardItem(str(cell)) for cell in row]
+                for item in items:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                model.appendRow(items)
+
+            if self.tv_detail_positionen:
+                self.tv_detail_positionen.setModel(model)
+                self.adjust_tableview_columns(self.tv_detail_positionen)
+                self.tv_detail_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+                self.tv_detail_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        except Exception as e:
+            show_error(self, "Fehler beim Laden der Rechnungen", str(e))
 
     # Updates 'lbl_search_for' with corresponding tab name
     def on_tab_changed(self, index):
@@ -636,7 +679,7 @@ class MainWindow(QMainWindow):
                 elif current_tab == "tab_dienstleister":
                     address_data = rel_data.get("addresses", {})
 
-                    # INSERT collected data into ADDRESSES
+                    # Adresse einfügen
                     cur.execute(
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
                         (
@@ -649,15 +692,13 @@ class MainWindow(QMainWindow):
                         )
                     )
                     address_id = cur.lastrowid
+
+                    # Logo speichern
                     logo_id = None
-                    # Checks if user selected a valid file
-                    if (self.file_name
-                            and self.logo_data
-                            and len(self.logo_data) > 0):
+                    if (self.file_name and self.logo_data and len(self.logo_data) > 0):
                         logo_file_name = self.file_name
                         logo_data = self.logo_data
                         file_type = self.mime_type or ""
-                        # INSERT collected data into LOGOS
                         cur.execute(
                             "INSERT INTO LOGOS (FILE_NAME, LOGO_BINARY, MIME_TYPE, CREATION_DATE) VALUES (?, ?, ?, ?)",
                             (
@@ -668,11 +709,10 @@ class MainWindow(QMainWindow):
                             )
                         )
                         logo_id = cur.lastrowid
-
                     else:
                         show_error(self, "Fehler", "Fehler beim Speichern des Logos")
 
-                    # INSERT collected data into SERVICE_PROVIDER
+                    # Dienstleister speichern
                     cur.execute(
                         "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
@@ -689,7 +729,7 @@ class MainWindow(QMainWindow):
                         )
                     )
 
-                    # Checks if Bank exists and INSERT collected data into ACCOUNT NAD BANK
+                    # Bank speichern
                     bank_data = rel_data.get("accounts", {})
                     bic = bank_data.get("tv_dienstleister_BIC", "")
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
@@ -704,31 +744,87 @@ class MainWindow(QMainWindow):
                             (iban, bic, main_data["tv_dienstleister_UStIdNr"])
                         )
 
-                    # Strips the collected CEOs list
+                    # CEOs erfassen und validieren
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
 
-                    # Opens the :QDialog: CEOStNrDialog and gathers StNr for every CEO
-                    if ceo_names:
+                    while ceo_names:
                         ceo_dlg = CEOStNrDialog(ceo_names, self)
-                        if ceo_dlg.exec() == QDialog.DialogCode.Accepted:
-                            ceo_stnr_map = ceo_dlg.get_ceo_st_numbers()
-                            for ceo_name, st_nr in ceo_stnr_map.items():
-                                if ceo_name and st_nr:
-                                    # INSERT collected data into CEO
-                                    cur.execute("SELECT COUNT(*) FROM CEO WHERE ST_NR=?", (st_nr,))
-                                    if cur.fetchone()[0] == 0:
-                                        cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)",
-                                                    (st_nr, ceo_name))
-                                    # INSERT collected data into REF_LABOR_COST
-                                    cur.execute(
-                                        "INSERT INTO REF_LABOR_COST (FK_ST_NR, FK_UST_IDNR) VALUES (?, ?)",
-                                        (st_nr, main_data["tv_dienstleister_UStIdNr"])
-                                    )
-                        else:
+                        if ceo_dlg.exec() != QDialog.DialogCode.Accepted:
                             show_error(self, "Abbruch", "Speichern ohne Steuernummern nicht möglich.")
                             return
+                        ceo_stnr_map = ceo_dlg.get_ceo_st_numbers()
+                        conflict = False
+                        ceo_inserts = []  # neue CEOs für späteren INSERT
+                        ref_inserts = []  # neue Zuordnungen für späteren INSERT
+                        used_steuernrs = set()  # für Doppelteingaben im Dialog
 
+                        # === Validierungsschleife ===
+                        for ceo_name, st_nr in ceo_stnr_map.items():
+                            if not ceo_name or not st_nr:
+                                show_error(self, "Fehler", "Alle Felder müssen ausgefüllt werden!")
+                                conflict = True
+                                break
+                            if st_nr in used_steuernrs:
+                                show_error(self, "Fehler",
+                                           f"Die Steuernummer {st_nr} wurde mehrmals eingegeben. Jede Steuernummer darf nur einmal verwendet werden.")
+                                conflict = True
+                                break
+                            used_steuernrs.add(st_nr)
+                            try:
+                                cur.execute("SELECT CEO_NAME FROM CEO WHERE ST_NR=?", (st_nr,))
+                                row = cur.fetchone()
+                            except Exception as e:
+                                show_error(self, "Fehler beim Datenbankzugriff",
+                                           f"Fehler bei Prüfung der Steuernummer {st_nr}: {e}")
+                                conflict = True
+                                break
+                            if row is None:
+                                ceo_inserts.append((st_nr, ceo_name))
+                            else:
+                                if row[0] != ceo_name:
+                                    show_error(
+                                        self,
+                                        "Fehler",
+                                        f"Die Steuernummer {st_nr} ist bereits für {row[0]} vergeben!\nBitte geben Sie eine andere Steuernummer für {ceo_name} an."
+                                    )
+                                    conflict = True
+                                    break
+                            # Verknüpfung prüfen
+                            try:
+                                cur.execute(
+                                    "SELECT COUNT(*) FROM REF_LABOR_COST WHERE FK_ST_NR=? AND FK_UST_IDNR=?",
+                                    (st_nr, main_data["tv_dienstleister_UStIdNr"])
+                                )
+                                if cur.fetchone()[0] == 0:
+                                    ref_inserts.append((st_nr, main_data["tv_dienstleister_UStIdNr"]))
+                                # sonst: Verknüpfung existiert schon – kein Fehler, kein doppelter Eintrag
+                            except Exception as e:
+                                show_error(self, "Fehler beim Datenbankzugriff",
+                                           f"Fehler bei Prüfung der Zuordnung für Steuernummer {st_nr}: {e}")
+                                conflict = True
+                                break
+
+                        if conflict:
+                            # Feedback wurde schon gegeben, Dialog erscheint erneut
+                            continue
+
+                        # === Alle Validierungen erfolgreich: Jetzt erst INSERTS ===
+                        try:
+                            for st_nr, ceo_name in ceo_inserts:
+                                cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)", (st_nr, ceo_name))
+                            for st_nr, ust_idnr in ref_inserts:
+                                cur.execute(
+                                    "INSERT INTO REF_LABOR_COST (FK_ST_NR, FK_UST_IDNR) VALUES (?, ?)",
+                                    (st_nr, ust_idnr)
+                                )
+                        except Exception as e:
+                            show_error(self, "Fehler beim Speichern",
+                                       f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
+                            return
+
+                        # Erfolgreich, verlasse die Schleife
+                        break
 
                 # --------------POSITIONEN-------------------
                 elif current_tab == "tab_positionen":
@@ -801,10 +897,9 @@ class MainWindow(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     model.appendRow(items)
                 self.tv_rechnungen_form_kunde.setModel(model)
+                self.adjust_tableview_columns(self.tv_rechnungen_form_kunde)
                 self.tv_rechnungen_form_kunde.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-                self.tv_rechnungen_form_kunde.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-                self.tv_rechnungen_form_kunde.selectionModel().selectionChanged.connect(self.on_kunde_selected)
-                self.tv_rechnungen_form_kunde.resizeColumnsToContents()
+                self.tv_rechnungen_form_kunde.setSelectionMode(QTableView.SelectionMode.SingleSelection)
             except Exception as e:
                 show_error(self, "Fehler beim Laden der Kunden", str(e))
 
@@ -821,11 +916,9 @@ class MainWindow(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     model.appendRow(items)
                 self.tv_rechnungen_form_dienstleister.setModel(model)
+                self.adjust_tableview_columns(self.tv_rechnungen_form_dienstleister)
                 self.tv_rechnungen_form_dienstleister.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-                self.tv_rechnungen_form_dienstleister.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-                self.tv_rechnungen_form_dienstleister.selectionModel().selectionChanged.connect(
-                    self.on_dienstleister_selected)
-                self.tv_rechnungen_form_dienstleister.resizeColumnsToContents()
+                self.tv_rechnungen_form_dienstleister.setSelectionMode(QTableView.SelectionMode.SingleSelection)
             except Exception as e:
                 show_error(self, "Fehler beim Laden der Dienstleister", str(e))
 
@@ -868,9 +961,9 @@ class MainWindow(QMainWindow):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             model.appendRow(items)
         self.tv_rechnungen_form_positionen.setModel(model)
+        self.adjust_tableview_columns(self.tv_rechnungen_form_positionen)
         self.tv_rechnungen_form_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.tv_rechnungen_form_positionen.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
-        self.tv_rechnungen_form_positionen.resizeColumnsToContents()
+        self.tv_rechnungen_form_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
     # Getter für die IDs bei Bedarf
     def get_selected_kunde_id(self):
@@ -1082,9 +1175,9 @@ class MainWindow(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
             self.tv_rechnungen_form_positionen.setModel(model)
+            self.adjust_tableview_columns(self.tv_rechnungen_form_positionen)
             self.tv_rechnungen_form_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-            self.tv_rechnungen_form_positionen.setSelectionMode(QTableView.SelectionMode.MultiSelection)
-            self.tv_rechnungen_form_positionen.resizeColumnsToContents()
+            self.tv_rechnungen_form_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         except Exception as e:
             show_error(self, "Fehler beim Laden der Positionen", str(e))
 
@@ -1387,6 +1480,22 @@ class MainWindow(QMainWindow):
             self.mime_type = mime_type
             print("Bild gewählt:", self.file_name)
             print("MIME-Type:", self.mime_type)
+
+            # === Logo-Vorschau ins Label laden ===
+            label = self.findChild(QLabel, "lbl_dienstleister_logo")
+            if label and self.logo_data:
+                pixmap = QPixmap()
+                pixmap.loadFromData(self.logo_data)
+                # Skaliere das Bild, damit es in das Label passt
+                scaled_pixmap = pixmap.scaled(
+                    label.width(),
+                    label.height(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                label.setPixmap(scaled_pixmap)
+                label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                label.setScaledContents(False)
         else:
             self.selected_files = []
             self.file_path = None
@@ -1395,6 +1504,10 @@ class MainWindow(QMainWindow):
             self.mime_type = None
             if hasattr(self, "fileListWidget"):
                 self.fileListWidget.clear()
+            # Label leeren, falls kein Bild gewählt
+            label = self.findChild(QLabel, "lbl_dienstleister_logo")
+            if label:
+                label.clear()
 
     def show_service_provider_logo(self, ust_idnr):
         with sqlite3.connect(DB_PATH) as conn:
@@ -1627,3 +1740,23 @@ class MainWindow(QMainWindow):
         draw_footer(y_next)
         c.save()
         return output_path
+
+    def adjust_tableview_columns(self, table_view: QTableView):
+        """Setzt erste Spalte rechtsbündig, alle Spalten ResizeToContents, und erste Spalte etwas breiter."""
+        model = table_view.model()
+        if not model or model.columnCount() == 0:
+            return
+        # Erste Spalte rechtsbündig
+        for row in range(model.rowCount()):
+            item = model.item(row, 0)
+            if item:
+                item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        # Spaltenbreite anpassen
+        header = table_view.horizontalHeader()
+        for col in range(header.count()):
+            header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+        table_view.resizeColumnsToContents()
+        # Erste Spalte extra breit machen
+        extra = 100  # Pixel-Zuschlag, nach Bedarf anpassen
+        current_width = table_view.columnWidth(0)
+        table_view.setColumnWidth(0, current_width + extra)

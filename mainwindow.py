@@ -3,6 +3,7 @@ import io
 import mimetypes
 import os
 import sqlite3
+import traceback
 from datetime import date
 import sys
 from io import BytesIO
@@ -11,20 +12,24 @@ from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
 import pyzipper
-from reportlab.lib import colors
+from PyQt6.QtPdf import QPdfDocument
+from PyQt6.QtPdfWidgets import QPdfView
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
+import win32api
+import win32print
 
 # IMPORT PyQt6 Packages
-from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtPrintSupport import QPrinter, QPrintPreviewDialog, QPrintDialog
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QComboBox, \
-    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QAbstractItemView, QWidget, QDateEdit, \
-    QDialog, QFormLayout, QFileDialog, QMessageBox, QVBoxLayout
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QTextDocument
+    QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QWidget, QDateEdit, \
+    QDialog, QFormLayout, QFileDialog, QMessageBox, QVBoxLayout, QProgressDialog, QAbstractItemView
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QImage, QPainter
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
+from PIL import Image
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
 from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, APPLICATION_WORKING_PATH, EXPORT_OUTPUT_PATH
@@ -196,23 +201,8 @@ class MainWindow(QMainWindow):
                     "table": "ACCOUNT",
                     "fields": ["tv_dienstleister_IBAN", "tv_dienstleister_BIC", "tv_dienstleister_Kreditinstitut"],
                 }
-            },
-            "tab_rechnungen": {
-                "customer": {
-                    "table": "CUSTOMERS",
-                    "fields": ["fk_custid"],
-                },
-                "service_provider": {
-                    "table": "SERVICE_PROVIDER",
-                    "fields": ["fk_ust_idnr"],
-                }
-            },
-            "tab_positionen": {
-                "invoice": {
-                    "table": "INVOICES",
-                    "fields": ["fk_invoice_nr"],
-                }
             }
+            # Entferne tab_rechnungen und tab_positionen aus relationships!
         }
 
         # Initiation of UI and program itself
@@ -227,11 +217,26 @@ class MainWindow(QMainWindow):
         self.tv_detail_positionen = self.findChild(QTableView, "tv_detail_positionen")
         os.makedirs(EXPORT_OUTPUT_PATH, exist_ok=True)
 
+
+        # PDF Dokument & Viewer erstellen
+        self.pdf_document = QPdfDocument(self)
+        self.pdf_view = QPdfView(self)
+        self.pdf_view.setDocument(self.pdf_document)
+        self.pdf_view.setMinimumSize(400, 600)  # Optional: Mindestgröße setzen
+        self.pdf_view.show()  # initial ausblenden
+        self.create_missing_invoice_pdfs()
+
+        # PDF-Viewer rechts im Rechnungen-Tab platzieren
+        rechnungen_tab = self.findChild(QWidget, "tab_rechnungen")
+        main_layout = rechnungen_tab.layout()  # Das ist das QHBoxLayout layoutTabRechnungenMain
+        if main_layout is not None:
+            main_layout.addWidget(self.pdf_view)
+
         # Connect Signal for Tab Change
         self.tabWidget.currentChanged.connect(self.on_tab_changed)
+        self.tabWidget.currentChanged.connect(self.update_export_button_state)
         # set correct on start
         self.on_tab_changed(self.tabWidget.currentIndex())
-        self.update_export_button_state(self.tabWidget.currentIndex())
 
         # Connect Signal for Click on 'btn_eintrag_speichern'
         btn_speichern = self.findChild(QPushButton, "btn_eintrag_speichern")
@@ -253,10 +258,10 @@ class MainWindow(QMainWindow):
         if btn_hinzufuegen:
             btn_hinzufuegen.clicked.connect(self.clear_and_enable_form_fields)
 
-        # Connect Signal for Click on 'btn_felder_leeren'
-        btn_felder_leeren = self.findChild(QPushButton, "btn_felder_leeren")
-        if btn_felder_leeren:
-            btn_felder_leeren.clicked.connect(self.clear_and_enable_form_fields)
+        # Connect Signal for Click on 'btn_drucken'
+        btn_drucken = self.findChild(QPushButton, "btn_drucken")
+        if btn_drucken:
+            btn_drucken.clicked.connect(self.print_invoice)
 
         # Connect Signal for Click on 'btn_eintrag_loeschen'
         btn_eintrag_loeschen = self.findChild(QPushButton, "btn_eintrag_loeschen")
@@ -267,6 +272,16 @@ class MainWindow(QMainWindow):
         self.btn_rechnung_exportieren = self.findChild(QPushButton, "btn_rechnung_exportieren")
         if self.btn_rechnung_exportieren:
             self.btn_rechnung_exportieren.clicked.connect(self.on_rechnung_exportieren_clicked)
+
+        # Connect Signal for Click on 'btn_drucken'
+        self.btn_drucken = self.findChild(QPushButton, "btn_drucken")
+        if self.btn_drucken:
+            self.btn_drucken.clicked.connect(self.on_drucken_clicked)
+
+        # Connect Signal for Click on 'btn_close_rechnung_hinzufuegen'
+        self.btn_close_form = self.findChild(QPushButton, "btn_close_rechnung_hinzufuegen")
+        if self.btn_close_form:
+            self.btn_close_form.clicked.connect(self.pdf_view.show)
 
         # Set DEBOUNCE Timer for every search field
         self.search_timer = QTimer(self)
@@ -360,6 +375,7 @@ class MainWindow(QMainWindow):
 
     # Clears and enables all form fields
     def clear_and_enable_form_fields(self):
+        self.pdf_view.hide()
         try:
             self.temp_positionen = []
             self.load_all_and_temp_positions_for_rechnungsformular()
@@ -414,6 +430,7 @@ class MainWindow(QMainWindow):
                 if table_view.objectName() == "tv_rechnungen":
                     # Falls du weiterhin Rechnungspositionen anzeigen willst
                     self.load_invoice_positions(row_id)
+                    self.create_and_show_invoice_pdf(row_id)
                 elif table_view.objectName() == "tv_dienstleister":
                     self.load_service_provider_details(row_id)
             self.update_form(current, table_view)
@@ -539,7 +556,6 @@ class MainWindow(QMainWindow):
     # Updates 'lbl_search_for' with corresponding tab name
     def on_tab_changed(self, index):
         try:
-            self.update_export_button_state
             current_tab = self.tabWidget.widget(index)
             if current_tab is not None:
                 tab_obj_name = current_tab.objectName()
@@ -556,13 +572,13 @@ class MainWindow(QMainWindow):
         main_fields = self.tab_field_mapping.get(current_tab, [])
         rels = self.relationships.get(current_tab, {})
 
-        # check validation of entered data
+        # Validierung Hauptfelder
         valid, main_data, error = self.validate_and_collect_fields(main_fields)
         if not valid:
             show_error(self, "Validierungsfehler", error)
             return
 
-        # Collects realtion data for corresponding case
+        # Validierung Relationen
         rel_data = {}
         for rel, rel_info in rels.items():
             fields = rel_info["fields"]
@@ -572,25 +588,40 @@ class MainWindow(QMainWindow):
                 return
             rel_data[rel] = sub_data
 
+        def parse_float(val):
+            print("parse_float called with:", repr(val), type(val))
+            if val is None:
+                return 0.0
+            if isinstance(val, (float, int)):
+                return float(val)
+            if isinstance(val, str):
+                val = val.strip().replace(",", ".")
+                if val == "":
+                    return 0.0
+                try:
+                    return float(val)
+                except Exception:
+                    return 0.0
+            return 0.0
+
         try:
             with sqlite3.connect(DB_PATH) as conn:
                 cur = conn.cursor()
 
-                # --------------RECHNUNGEN-------------------
                 if current_tab == "tab_rechnungen":
-                    # Creates data array for Tab Rechnungen
-                    if "customer" in rel_data:
-                        main_data["FK_CUSTID"] = rel_data["customer"].get("fk_custid",
-                                                                          None) or self.get_selected_kunde_id()
-                    else:
-                        main_data["FK_CUSTID"] = self.get_selected_kunde_id()
-                    if "service_provider" in rel_data:
-                        main_data["FK_UST_IDNR"] = rel_data["service_provider"].get("fk_ust_idnr",
-                                                                                    None) or self.get_selected_dienstleister_id()
-                    else:
-                        main_data["FK_UST_IDNR"] = self.get_selected_dienstleister_id()
-
-                    # INSERT collected data into INVOICES
+                    # Kundenauswahl prüfen
+                    kunde_index = self.tv_rechnungen_form_kunde.currentIndex()
+                    if not kunde_index.isValid():
+                        show_error(self, "Kein Kunde ausgewählt", "Bitte wähle einen Kunden aus!")
+                        return
+                    main_data["FK_CUSTID"] = kunde_index.sibling(kunde_index.row(), 0).data()
+                    # Dienstleisterauswahl prüfen
+                    dl_index = self.tv_rechnungen_form_dienstleister.currentIndex()
+                    if not dl_index.isValid():
+                        show_error(self, "Kein Dienstleister ausgewählt", "Bitte wähle einen Dienstleister aus!")
+                        return
+                    main_data["FK_UST_IDNR"] = dl_index.sibling(dl_index.row(), 0).data()
+                    # Rechnung speichern
                     cur.execute(
                         "INSERT INTO INVOICES (INVOICE_NR, CREATION_DATE, FK_CUSTID, FK_UST_IDNR, LABOR_COST, VAT_RATE_LABOR, VAT_RATE_POSITIONS) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (
@@ -598,48 +629,60 @@ class MainWindow(QMainWindow):
                             main_data["de_erstellungsdatum"],
                             main_data["FK_CUSTID"],
                             main_data["FK_UST_IDNR"],
-                            main_data["dsb_lohnkosten"],
-                            main_data["dsb_mwst_lohnkosten"],
-                            main_data["dsb_mwst_positionen"]
+                            parse_float(main_data.get("dsb_lohnkosten")),
+                            parse_float(main_data.get("dsb_mwst_lohnkosten")),
+                            parse_float(main_data.get("dsb_mwst_positionen")),
                         )
                     )
 
-                    # Collect only selected positions
                     selected_indexes = self.tv_rechnungen_form_positionen.selectionModel().selectedRows()
                     for idx in selected_indexes:
                         pos_id = idx.sibling(idx.row(), 0).data()
-                        if str(pos_id).startswith("NEU-"):
-                            # Collect and connect temporary positions (when created via the + button)
-                            temp_index = int(str(pos_id).split("-")[1]) - 1
+                        # Neue Position ("NEU-x")?
+                        if isinstance(pos_id, str) and pos_id.startswith("NEU-"):
+                            temp_index = int(pos_id.split("-")[1]) - 1
+                            if temp_index < 0 or temp_index >= len(self.temp_positionen):
+                                print("FEHLER: temp_index out of range!", temp_index, self.temp_positionen)
+                                continue
                             pos = self.temp_positionen[temp_index]
-                            # INSERT collected data into POSITIONS
+                            area_raw = pos.get("AREA", 0)
+                            unit_price_raw = pos.get("UNIT_PRICE", 0)
+                            area = parse_float(area_raw)
+                            unit_price = parse_float(unit_price_raw)
+                            # Neue Position schreiben
                             cur.execute(
                                 "INSERT INTO POSITIONS (CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?)",
                                 (
                                     main_data["de_erstellungsdatum"],
                                     pos.get("DESCRIPTION", ""),
-                                    pos.get("AREA", 0),
-                                    pos.get("UNIT_PRICE", 0),
+                                    area,
+                                    unit_price,
                                     pos.get("NAME", ""),
                                 )
                             )
                             new_pos_id = cur.lastrowid
-                            # INSERT collected data into REF_INVOICES_POSITIONS (for temporary positions)
+                            # Verknüpfung mit Rechnung speichern
                             cur.execute(
                                 "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
                                 (new_pos_id, main_data["tb_rechnungsnummer"])
                             )
                         else:
-                            # INSERT collected data into REF_INVOICES_POSITIONS (for existing positions)
-                            cur.execute(
-                                "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                                (int(pos_id), main_data["tb_rechnungsnummer"])
-                            )
+                            # Bestehende Position: nur Verknüpfung speichern
+                            try:
+                                cur.execute(
+                                    "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
+                                    (int(pos_id), main_data["tb_rechnungsnummer"])
+                                )
+                            except Exception as e:
+                                print("FEHLER bei existierender Position:", pos_id, e)
+                                continue
 
-                    # Clear temporary positions after Saving
+                    # Commits current Session into DB
+                    conn.commit()
+                    # Nach Speichern: temporäre Positionen leeren, GUI aktualisieren
                     self.temp_positionen = []
-                    # Reload all QTableViews
                     self.load_all_and_temp_positions_for_rechnungsformular()
+                    self.create_and_show_invoice_pdf(main_data["tb_rechnungsnummer"])
 
 
                 #--------------KUNDEN-------------------
@@ -853,7 +896,9 @@ class MainWindow(QMainWindow):
             self.clear_and_enable_form_fields()
             self.init_tables()
 
+
         except Exception as e:
+            print(traceback.format_exc())
             show_error(self, "Speicherfehler", str(e))
 
     # Validates collected data before commiting into DB
@@ -963,7 +1008,7 @@ class MainWindow(QMainWindow):
         self.tv_rechnungen_form_positionen.setModel(model)
         self.adjust_tableview_columns(self.tv_rechnungen_form_positionen)
         self.tv_rechnungen_form_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.tv_rechnungen_form_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self.tv_rechnungen_form_positionen.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
 
     # Getter für die IDs bei Bedarf
     def get_selected_kunde_id(self):
@@ -1177,7 +1222,7 @@ class MainWindow(QMainWindow):
             self.tv_rechnungen_form_positionen.setModel(model)
             self.adjust_tableview_columns(self.tv_rechnungen_form_positionen)
             self.tv_rechnungen_form_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-            self.tv_rechnungen_form_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+            self.tv_rechnungen_form_positionen.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         except Exception as e:
             show_error(self, "Fehler beim Laden der Positionen", str(e))
 
@@ -1257,12 +1302,14 @@ class MainWindow(QMainWindow):
 
     def update_export_button_state(self, index):
         current_tab = self.tabWidget.widget(index)
-        if not self.btn_rechnung_exportieren:
+        if not self.btn_rechnung_exportieren or not self.btn_drucken:
             return
         if current_tab and current_tab.objectName() == "tab_rechnungen":
             self.btn_rechnung_exportieren.setEnabled(True)
+            self.btn_drucken.setEnabled(True)
         else:
             self.btn_rechnung_exportieren.setEnabled(False)
+            self.btn_drucken.setEnabled(False)
 
     def on_rechnung_exportieren_clicked(self):
         idx = self.tv_rechnungen.currentIndex()
@@ -1272,66 +1319,9 @@ class MainWindow(QMainWindow):
         invoice_nr = idx.sibling(idx.row(), 0).data()
 
         try:
-            # === Datenbankabfrage wie bisher ===
-            with sqlite3.connect(DB_PATH) as conn:
-                cur = conn.cursor()
-
-                # Rechnungsdaten
-                cur.execute("SELECT * FROM INVOICES WHERE INVOICE_NR = ?", (invoice_nr,))
-                invoice_row = cur.fetchone()
-                invoice_columns = [desc[0] for desc in cur.description]
-
-                # Kunde
-                cur.execute("""
-                    SELECT c.*, a.*
-                    FROM CUSTOMERS c
-                    LEFT JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID
-                    WHERE c.CUSTID = (SELECT FK_CUSTID FROM INVOICES WHERE INVOICE_NR = ?)
-                """, (invoice_nr,))
-                customer_row = cur.fetchone()
-                customer_columns = [desc[0] for desc in cur.description]
-
-                # Dienstleister
-                cur.execute("""
-                    SELECT s.*, a.*
-                    FROM SERVICE_PROVIDER s
-                    LEFT JOIN ADDRESSES a ON s.FK_ADDRESS_ID = a.ID
-                    WHERE s.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
-                """, (invoice_nr,))
-                provider_row = cur.fetchone()
-                provider_columns = [desc[0] for desc in cur.description]
-
-                # CEOs zum Dienstleister
-                cur.execute("""
-                    SELECT ceo.ST_NR, ceo.CEO_NAME
-                    FROM SERVICE_PROVIDER sp
-                    JOIN REF_LABOR_COST rel ON rel.FK_UST_IDNR = sp.UST_IDNR
-                    JOIN CEO ceo ON rel.FK_ST_NR = ceo.ST_NR
-                    WHERE sp.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
-                """, (invoice_nr,))
-                ceos_rows = cur.fetchall()
-                ceos_columns = [desc[0] for desc in cur.description]
-
-                # Positionen
-                cur.execute("""
-                    SELECT p.*
-                    FROM REF_INVOICES_POSITIONS ref
-                    JOIN POSITIONS p ON ref.FK_POSITIONS_POS_ID = p.POS_ID
-                    WHERE ref.FK_INVOICES_INVOICE_NR = ?
-                """, (invoice_nr,))
-                positions_rows = cur.fetchall()
-                positions_columns = [desc[0] for desc in cur.description]
-
-            export_data = [
-                {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
-                {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
-                {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
-                {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
-                {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
-            ]
+            export_data = self.get_export_data(invoice_nr)
             ##########################################
             # XML ausgeben als Datei
-            print(export_data)
 
             zip_output_path, _ = QFileDialog.getSaveFileName(
                 self,
@@ -1348,14 +1338,13 @@ class MainWindow(QMainWindow):
             )
 
             logo_bytes = None
-            if fk_logo_id:
-                cursor = conn.cursor()
-                cursor.execute("SELECT LOGO_BINARY FROM LOGOS WHERE ID = ?", (fk_logo_id,))
-                result = cursor.fetchone()
-                if result and result[0] is not None:
-                    logo_bytes = result[0]
-
-            conn.close()
+            with sqlite3.connect(DB_PATH) as conn:
+                if fk_logo_id:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT LOGO_BINARY FROM LOGOS WHERE ID = ?", (fk_logo_id,))
+                    result = cursor.fetchone()
+                    if result and result[0] is not None:
+                        logo_bytes = result[0]
 
             with open(EXPORT_OUTPUT_PATH + r"\rechnung.xml", "w", encoding="utf-8") as f:
                 f.write(xml_string)
@@ -1381,6 +1370,7 @@ class MainWindow(QMainWindow):
                         zip_file.write(filepath, arcname=arcname)
 
                 print(f"{zip_output_path} wurde erstellt und mit Passwort geschützt.")
+                conn.close()
             else:
                 show_info(self, "Abgebrochen", "Der Export wurde abgebrochen.")
 
@@ -1568,176 +1558,190 @@ class MainWindow(QMainWindow):
     def create_invoice_pdf(self, build_xml_string: str, build_logo_binary: bytes, output_path: str):
         root = ET.fromstring(build_xml_string)
 
+        def extract_text(element, tag):
+            child = element.find(tag)
+            return child.text.strip() if child is not None and child.text else ""
+
         invoice = root.find("invoice")
         customer = root.find("customer")
         provider = root.find("service_provider")
         ceo = root.find("ceos/ceo")
-        positions = root.findall("positions/position")
+        positions = root.find("positions").findall("position")
+        bank = root.find("bank")
 
-        # Rechnungsdaten
-        invoice_nr = invoice.findtext("INVOICE_NR")
-        invoice_date = invoice.findtext("CREATION_DATE")
-        customer_id = invoice.findtext("FK_CUSTID")
-        labor_cost = float(invoice.findtext("LABOR_COST"))
-        vat_labor = float(invoice.findtext("VAT_RATE_LABOR"))
-        vat_positions = float(invoice.findtext("VAT_RATE_POSITIONS"))
+        invoice_nr = extract_text(invoice, "INVOICE_NR")
+        creation_date = extract_text(invoice, "CREATION_DATE")
+        cust_id = extract_text(invoice, "FK_CUSTID")
+        ust_id = extract_text(invoice, "FK_UST_IDNR")
+        labor_cost = float(extract_text(invoice, "LABOR_COST") or 0)
+        vat_rate_labor = float(extract_text(invoice, "VAT_RATE_LABOR") or 19)
+        vat_rate_positions = float(extract_text(invoice, "VAT_RATE_POSITIONS") or 19)
 
-        # Kundendaten
-        customer_name = f"{customer.findtext('FIRST_NAME')} {customer.findtext('LAST_NAME')}"
-        customer_street = f"{customer.findtext('STREET')} {customer.findtext('NUMBER')}"
-        customer_city = f"{customer.findtext('ZIP')} {customer.findtext('CITY')}"
-
-        # Anbieterinformationen
-        provider_name = provider.findtext("PROVIDER_NAME")
-        provider_street = f"{provider.findtext('STREET')} {provider.findtext('NUMBER')}"
-        provider_city = f"{provider.findtext('ZIP')} {provider.findtext('CITY')}"
-        provider_tel = provider.findtext("TELNR")
-        provider_mobil = provider.findtext("MOBILTELNR")
-        provider_fax = provider.findtext("FAXNR")
-        provider_email = provider.findtext("EMAIL")
-        provider_web = provider.findtext("WEBSITE")
-
-        ceo_name = ceo.findtext("CEO_NAME")
-        tax_number = ceo.findtext("ST_NR")
-        ust_id = invoice.findtext("FK_UST_IDNR")
+        full_name = f"{extract_text(customer, 'FIRST_NAME')} {extract_text(customer, 'LAST_NAME')}"
+        address_line1 = f"{extract_text(customer, 'STREET')} {extract_text(customer, 'NUMBER')}"
+        address_line2 = f"{extract_text(customer, 'ZIP')} {extract_text(customer, 'CITY')}"
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
+        margin = 20 * mm
+        line_height = 5 * mm
+        y = height - margin
+
+        def draw_text(x, y, text, size=10, bold=False):
+            font = "Helvetica-Bold" if bold else "Helvetica"
+            c.setFont(font, size)
+            c.drawString(x, y, text)
+
+        def draw_right(x, y, text, size=10, bold=False):
+            font = "Helvetica-Bold" if bold else "Helvetica"
+            c.setFont(font, size)
+            c.drawRightString(x, y, text)
 
         def draw_logo():
             if build_logo_binary:
                 try:
-                    from reportlab.lib.utils import ImageReader
-                    image_stream = io.BytesIO(build_logo_binary)
-                    image = ImageReader(image_stream)
-                    c.drawImage(image, x=40, y=750, width=120, height=60, preserveAspectRatio=True, mask='auto')
-                except Exception as e:
-                    print("Logo konnte nicht gezeichnet werden:", e)
-            else:
-                print("Kein Logo vorhanden oder leer")
+                    logo = ImageReader(BytesIO(build_logo_binary))
+                    c.drawImage(logo, width - margin - 40 * mm, y - 10 * mm, width=40 * mm, preserveAspectRatio=True)
+                except:
+                    pass
 
-        def draw_green_header():
-            c.setFillColor(colors.green)
-            c.rect(0, height - 40, width, 40, fill=True, stroke=False)
-            c.setFillColor(colors.white)
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(20 * mm, height - 25, provider_name)
-
-        def draw_address_blocks():
-            c.setFillColor(colors.black)
-            c.setFont("Helvetica", 10)
-            y = 245
-            c.drawString(20 * mm, y * mm, customer_name)
-            c.drawString(20 * mm, (y - 5) * mm, customer_street)
-            c.drawString(20 * mm, (y - 10) * mm, customer_city)
-
-            y = 245
-            c.drawRightString(190 * mm, y * mm, provider_name)
-            c.drawRightString(190 * mm, (y - 5) * mm, ceo_name)
-            c.drawRightString(190 * mm, (y - 10) * mm, provider_street)
-            c.drawRightString(190 * mm, (y - 15) * mm, provider_city)
-            c.drawRightString(190 * mm, (y - 20) * mm, f"Mobil: {provider_mobil}")
-            c.drawRightString(190 * mm, (y - 25) * mm, f"Tel.: {provider_tel}")
-            c.drawRightString(190 * mm, (y - 30) * mm, f"Fax: {provider_fax}")
-            c.drawRightString(190 * mm, (y - 35) * mm, f"E-Mail: {provider_email}")
-            c.drawRightString(190 * mm, (y - 40) * mm, f"Web: {provider_web}")
-
-        def draw_invoice_metadata():
-            y = 200
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(20 * mm, y * mm, "Rechnung")
-            c.setFont("Helvetica", 10)
-            c.drawString(20 * mm, (y - 7) * mm, "Rechnungsnummer:")
-            c.drawString(60 * mm, (y - 7) * mm, invoice_nr)
-            c.drawString(20 * mm, (y - 12) * mm, "Kundennummer:")
-            c.drawString(60 * mm, (y - 12) * mm, customer_id)
-            c.drawString(20 * mm, (y - 17) * mm, "Datum:")
-            c.drawString(60 * mm, (y - 17) * mm, invoice_date)
-
-        def draw_items_and_totals():
-            y = 170
-            c.setFont("Helvetica-Bold", 10)
-            c.setFillColor(colors.green)
-            c.drawString(20 * mm, y * mm, "Pos.")
-            c.drawString(30 * mm, y * mm, "Bezeichnung")
-            c.drawRightString(190 * mm, y * mm, "Preis")
-            c.setFont("Helvetica", 10)
-            c.setFillColor(colors.black)
-
-            y -= 5
-            net_total = 0
-            for idx, pos in enumerate(sorted(positions, key=lambda p: int(p.findtext("POS_ID"))), start=1):
-                name = pos.findtext("NAME")
-                desc = pos.findtext("DESCRIPTION") or ""
-                area = float(pos.findtext("AREA"))
-                price = float(pos.findtext("UNIT_PRICE"))
-                total = area * price
-                net_total += total
-
-                c.drawString(20 * mm, y * mm, f"{idx}")
-                c.drawString(30 * mm, y * mm, name)
-                y -= 5
-                if desc.strip():
-                    for line in desc.splitlines():
-                        c.drawString(35 * mm, y * mm, line.strip())
-                        y -= 5
-                c.drawString(35 * mm, y * mm, f"{area:.2f} m² EP: {price:.2f} €")
-                c.drawRightString(190 * mm, y * mm, f"{total:.2f} €")
-                y -= 10
-
-            vat = net_total * vat_positions / 100
-            gross = net_total + vat
-            vat_labor_amt = labor_cost * vat_labor / 100
-
-            c.drawRightString(170 * mm, y * mm, "Nettobetrag:")
-            c.drawRightString(190 * mm, y * mm, f"{net_total:.2f} €")
-            y -= 5
-            c.drawRightString(170 * mm, y * mm, f"zzgl. {vat_positions:.0f} % MwSt.:")
-            c.drawRightString(190 * mm, y * mm, f"{vat:.2f} €")
-            y -= 5
-            c.setFont("Helvetica-Bold", 10)
-            c.drawRightString(170 * mm, y * mm, "Bruttobetrag:")
-            c.drawRightString(190 * mm, y * mm, f"{gross:.2f} €")
-
-            y -= 10
-            c.setFont("Helvetica", 10)
-            c.drawString(20 * mm, y * mm, f"Im Bruttobetrag sind {labor_cost:.2f} € Lohnkosten enthalten.")
-            y -= 5
-            c.drawString(20 * mm, y * mm, f"Die darin enthaltene Mehrwertsteuer beträgt {vat_labor_amt:.2f} €.")
-            return y
-
-        def draw_footer(y):
-            y -= 10
-            c.drawString(20 * mm, y * mm, "Mit freundlichen Grüßen")
-            y -= 5
-            c.drawString(20 * mm, y * mm, ceo_name)
-            y -= 10
-            c.drawString(20 * mm, y * mm,
-                         "Sie sind verpflichtet, die Rechnung zu Steuerzwecken zwei Jahre lang aufzubewahren.")
-            y -= 5
-            c.drawString(20 * mm, y * mm, "Die aufgeführten Arbeiten wurden ausgeführt im Mai 2025.")
-            y -= 10
-            c.drawString(20 * mm, y * mm, "Bankverbindung:")
-            c.drawString(30 * mm, y * mm, "Sparkasse Karlsruhe Ettlingen")
-            y -= 5
-            c.drawString(30 * mm, y * mm, "IBAN: DE57 6605 0101 0123 4567 89")
-            y -= 5
-            c.drawString(30 * mm, y * mm, "BIC: KARSDE66XXX")
-            y -= 10
-            c.drawString(20 * mm, y * mm, "Geschäftsführung:")
-            c.drawString(60 * mm, y * mm, ceo_name)
-            y -= 5
-            c.drawString(60 * mm, y * mm, f"St.-Nr.: {tax_number}")
-            y -= 5
-            c.drawString(60 * mm, y * mm, f"USt-IdNr.: {ust_id}")
-
-        # Render
-        draw_green_header()
         draw_logo()
-        draw_address_blocks()
-        draw_invoice_metadata()
-        y_next = draw_items_and_totals()
-        draw_footer(y_next)
+        draw_text(margin, y,
+                  f"{extract_text(provider, 'PROVIDER_NAME')}   •   {extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}   •   {extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
+        y -= 15 * mm
+
+        draw_text(margin, y, full_name)
+        y -= line_height
+        draw_text(margin, y, address_line1)
+        y -= line_height
+        draw_text(margin, y, address_line2)
+        y -= 10 * mm
+
+        draw_text(margin, y, extract_text(provider, "PROVIDER_NAME"))
+        y -= line_height
+        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
+        y -= line_height
+        draw_text(margin, y, f"{extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}")
+        y -= line_height
+        draw_text(margin, y, f"{extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
+        y -= 8 * mm
+
+        for label, field in [
+            ("Mobil", "MOBILTELNR"),
+            ("Tel.", "TELNR"),
+            ("Fax", "FAXNR"),
+            ("E-Mail", "EMAIL"),
+            ("Web", "WEBSITE"),
+        ]:
+            draw_text(margin, y, f"{label}: {extract_text(provider, field)}")
+            y -= line_height
+
+        y -= 5 * mm
+        draw_text(margin, y, "Rechnung", size=14, bold=True)
+        y -= 8 * mm
+        draw_text(margin, y, "Rechnungsnummer:")
+        draw_text(margin + 40 * mm, y, invoice_nr)
+        y -= line_height
+        draw_text(margin, y, "Kundennummer:")
+        draw_text(margin + 40 * mm, y, cust_id)
+        y -= line_height
+        draw_text(margin, y, "Datum:")
+        draw_text(margin + 40 * mm, y, creation_date)
+        y -= 10 * mm
+
+        draw_text(margin, y, f"Sehr geehrter Herr {extract_text(customer, 'LAST_NAME')},")
+        y -= line_height
+        draw_text(margin, y, "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.")
+        y -= 10 * mm
+
+        draw_text(margin, y, "Pos. Bezeichnung Preis", bold=True)
+        y -= line_height
+        netto_summe = 0
+
+        for idx, pos in enumerate(positions, 1):
+            name = extract_text(pos, "NAME")
+            desc = extract_text(pos, "DESCRIPTION")
+            area = float(extract_text(pos, "AREA") or 0)
+            unit_price = float(extract_text(pos, "UNIT_PRICE") or 0)
+            total = area * unit_price
+            netto_summe += total
+
+            draw_text(margin, y, f"Pos. {idx} {name}")
+            y -= line_height
+            if desc:
+                for line in desc.splitlines():
+                    draw_text(margin + 5 * mm, y, line)
+                    y -= line_height
+            draw_text(margin + 5 * mm, y, f"{area:.2f} m² EP: {unit_price:.2f} €")
+            draw_right(width - margin, y, f"{total:.2f} €")
+            y -= 2 * line_height
+
+        y -= 2 * line_height
+        vat = netto_summe * vat_rate_positions / 100
+        brutto = netto_summe + vat
+
+        draw_text(margin, y, "Nettobetrag:")
+        draw_right(width - margin, y, f"{netto_summe:.2f} €")
+        y -= line_height
+        draw_text(margin, y, f"zzgl. {vat_rate_positions:.0f} % MwSt.:")
+        draw_right(width - margin, y, f"{vat:.2f} €")
+        y -= line_height
+        draw_text(margin, y, "Bruttobetrag:")
+        draw_right(width - margin, y, f"{brutto:.2f} €")
+        y -= 10 * mm
+
+        lohnsteueranteil = labor_cost * vat_rate_labor / (100 + vat_rate_labor)
+
+        draw_text(margin, y,
+                  f"Überweisen Sie bitte den offenen Betrag in Höhe von {brutto:.2f} € auf das unten aufgeführte Geschäftskonto.")
+        y -= line_height
+        draw_text(margin, y,
+                  f"Im Bruttobetrag sind {labor_cost:.2f} € Lohnkosten enthalten. Die darin enthaltene Mehrwertsteuer beträgt {lohnsteueranteil:.2f} €.")
+        y -= 10 * mm
+
+        draw_text(margin, y, "Mit freundlichen Grüßen")
+        y -= line_height
+        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
+        y -= 15 * mm
+
+        draw_text(margin, y, "Sie sind verpflichtet, die Rechnung zu Steuerzwecken zwei Jahre lang aufzubewahren.")
+        y -= line_height
+        draw_text(margin, y, "Die aufgeführten Arbeiten wurden ausgeführt im Januar 2020.")
+        y -= 10 * mm
+
+        draw_text(margin, y, "Sitz des Unternehmens:")
+        y -= line_height
+        draw_text(margin, y, f"{extract_text(provider, 'PROVIDER_NAME')}")
+        y -= line_height
+        draw_text(margin, y, f"{extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}")
+        y -= line_height
+        draw_text(margin, y, f"{extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
+        y -= 10 * mm
+
+        draw_text(margin, y, "Bankverbindung:")
+        y -= line_height
+        if bank is not None:
+            draw_text(margin, y, extract_text(bank, "BANK_NAME"))
+            y -= line_height
+            draw_text(margin, y, f"IBAN: {extract_text(bank, 'IBAN')}")
+            y -= line_height
+            draw_text(margin, y, f"BIC: {extract_text(bank, 'BIC')}")
+        else:
+            draw_text(margin, y, "(nicht angegeben)")
+            y -= 2 * line_height
+
+        y -= 5 * mm
+        draw_text(margin, y, "Geschäftsführung:")
+        y -= line_height
+        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
+        y -= line_height
+        draw_text(margin, y, f"St.-Nr.: {extract_text(ceo, 'ST_NR')}")
+        y -= line_height
+        draw_text(margin, y, f"USt-IdNr.: {ust_id}")
+
+        c.setFont("Helvetica", 8)
+        c.drawString(margin, 10 * mm, "BackOffice 2020 – Das ideale Rechnungsprogramm für Handwerksbetriebe")
+        c.drawRightString(width - margin, 10 * mm, "Seite 1 von 1")
         c.save()
         return output_path
 
@@ -1760,3 +1764,145 @@ class MainWindow(QMainWindow):
         extra = 100  # Pixel-Zuschlag, nach Bedarf anpassen
         current_width = table_view.columnWidth(0)
         table_view.setColumnWidth(0, current_width + extra)
+
+    def print_invoice(self):
+        return False
+
+    def show_invoice_pdf(self, pdf_path):
+        self.pdf_document.load(pdf_path)
+        self.pdf_view.setPageMode(QPdfView.PageMode.SinglePage)
+        self.pdf_view.setZoomMode(QPdfView.ZoomMode.FitInView)
+
+        if self.w_rechnung_hinzufuegen.isVisible():
+            self.pdf_view.hide()
+        else:
+            self.pdf_view.show()
+
+    def create_and_show_invoice_pdf(self, invoice_nr):
+        export_data = self.get_export_data(invoice_nr)
+        xml_string = self.build_invoice_xml(export_data)
+
+        # Logo laden
+        fk_logo_id = next(
+            (entry["service_provider"].get("FK_LOGO_ID") for entry in export_data if "service_provider" in entry),
+            None
+        )
+        logo_bytes = None
+        if fk_logo_id:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT LOGO_BINARY FROM LOGOS WHERE ID = ?", (fk_logo_id,))
+                result = cursor.fetchone()
+                if result and result[0] is not None:
+                    logo_bytes = result[0]
+
+        pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+        self.create_invoice_pdf(xml_string, logo_bytes, pdf_path)
+        self.show_invoice_pdf(pdf_path)
+
+    def create_missing_invoice_pdfs(self):
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT INVOICE_NR FROM INVOICES")
+            all_invoices = [row[0] for row in cur.fetchall()]
+        missing = []
+        for invoice_nr in all_invoices:
+            pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+            if not os.path.exists(pdf_path):
+                missing.append(invoice_nr)
+        if not missing:
+            return
+        progress = QProgressDialog("PDFs werden erstellt...", "Abbrechen", 0, len(missing), self)
+        progress.setWindowTitle("Rechnung-PDFs generieren")
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        for i, invoice_nr in enumerate(missing, 1):
+            if progress.wasCanceled():
+                break
+            self.create_and_show_invoice_pdf(invoice_nr)
+            progress.setValue(i)
+        progress.setValue(len(missing))
+
+    def get_export_data(self, invoice_nr):
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+
+            # Rechnungsdaten
+            cur.execute("SELECT * FROM INVOICES WHERE INVOICE_NR = ?", (invoice_nr,))
+            invoice_row = cur.fetchone()
+            invoice_columns = [desc[0] for desc in cur.description]
+
+            # Kunde
+            cur.execute("""
+                SELECT c.*, a.*
+                FROM CUSTOMERS c
+                LEFT JOIN ADDRESSES a ON c.FK_ADDRESS_ID = a.ID
+                WHERE c.CUSTID = (SELECT FK_CUSTID FROM INVOICES WHERE INVOICE_NR = ?)
+            """, (invoice_nr,))
+            customer_row = cur.fetchone()
+            customer_columns = [desc[0] for desc in cur.description]
+
+            # Dienstleister
+            cur.execute("""
+                SELECT s.*, a.*
+                FROM SERVICE_PROVIDER s
+                LEFT JOIN ADDRESSES a ON s.FK_ADDRESS_ID = a.ID
+                WHERE s.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+            """, (invoice_nr,))
+            provider_row = cur.fetchone()
+            provider_columns = [desc[0] for desc in cur.description]
+
+            # CEOs zum Dienstleister
+            cur.execute("""
+                SELECT ceo.ST_NR, ceo.CEO_NAME
+                FROM SERVICE_PROVIDER sp
+                JOIN REF_LABOR_COST rel ON rel.FK_UST_IDNR = sp.UST_IDNR
+                JOIN CEO ceo ON rel.FK_ST_NR = ceo.ST_NR
+                WHERE sp.UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+            """, (invoice_nr,))
+            ceos_rows = cur.fetchall()
+            ceos_columns = [desc[0] for desc in cur.description]
+
+            # Positionen
+            cur.execute("""
+                SELECT p.*
+                FROM REF_INVOICES_POSITIONS ref
+                JOIN POSITIONS p ON ref.FK_POSITIONS_POS_ID = p.POS_ID
+                WHERE ref.FK_INVOICES_INVOICE_NR = ?
+            """, (invoice_nr,))
+            positions_rows = cur.fetchall()
+            positions_columns = [desc[0] for desc in cur.description]
+
+        export_data = [
+            {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
+            {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
+            {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
+            {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
+            {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
+        ]
+        return export_data
+
+    def on_drucken_clicked(self):
+        idx = self.tv_rechnungen.currentIndex()
+        if not idx.isValid():
+            show_error(self, "Keine Auswahl", "Bitte zuerst eine Rechnung auswählen!")
+            return
+        invoice_nr = idx.sibling(idx.row(), 0).data()
+        pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+        if not os.path.exists(pdf_path):
+            self.create_and_show_invoice_pdf(invoice_nr)
+
+        # Drucker und Dialog, aber KEINE Vorschau/rendern!
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        print_dialog = QPrintDialog(printer)
+        print_dialog.setWindowTitle("Rechnung drucken")
+        if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
+            # Öffnet Standartdruckprogramm und sendet direkt an drucker
+            print("Gewählter Drucker:", printer.printerName())
+            win32api.ShellExecute(
+                0,
+                "printto",
+                pdf_path,
+                f'"{printer.printerName()}"',
+                ".",
+                0
+            )

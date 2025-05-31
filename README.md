@@ -25,22 +25,10 @@ Erstellung einer Rechungserstellungssoftware
 ## Todo
 
 
-
-
-- [ ]    11.    Rechnungen erstellen
-    - [ ]    Auswahl von Dienstleister + anlegen Button
-    - [ ]    Auswahl von Kunden + anlegen Button
-    - [x]    Auswahl von mehreren Positionen + Bulk anlegen Button 18.05.2025
 - [ ]     12.    Form Validation Rules erfassen und umsetzen
-- [X]     13.    LOGO upload umsetzen
-- [ ]     14.    Rechnungen als PDF exportieren mit Druckvorschau
-- [ ]     15.    PDF-Vorschau für bestehende Rechnungen
-- [ ] 16.    PDF-Vorschau für bestehende Rechnungen -> niedrige Prio 
 - [ ] 18. Styling verbessern
     - [ ] Padding obere und linke Seite erhöhen (3-4px ?)
-    - [ ] Bei Rechnungen -> Positionstabelle unten -> Eintragsnummer ganz links entfernen (ist sinnlos)
-    - [ ] In den Tabellen -> wichtige Spalten weiter vorne anzeigen (optional wenn genug Zeit ist)
-    - [ ] Warum ist neben der Suchleiste eine Anzeige für das Erstellungsdatum?
+
 ### DONE
 - [x]    GUI erstellen
 - [x]    Datenbanktyp auswählen und DB erstellen
@@ -69,4 +57,10 @@ Erstellung einer Rechungserstellungssoftware
 - [x]    Einträge durchsuchen 24.05.2025
     - [x]    Label 'lbl_search_for' responisve machen (Text ändern je nach geöffnetem Tab) 18.05.2025
 - [ ] autom. Width von Details Pages realisieren (zurückgestellt)
-
+- [x] PDF-Vorschau für bestehende Rechnungen -> niedrige Prio
+- [x]    Rechnungen erstellen
+    - [x]    Auswahl von Dienstleister
+    - [x]    Auswahl von Kunden
+    - [x]    Auswahl von mehreren Positionen + Bulk anlegen Button 18.05.2025
+- [X]   LOGO upload umsetzen
+- [ ]   Rechnungen als PDF exportieren mit Druckvorschau

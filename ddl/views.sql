@@ -63,10 +63,11 @@ JOIN
 DROP VIEW IF EXISTS view_positions_full;
 CREATE VIEW view_positions_full AS
 SELECT
-    POS_ID AS PositionsID,                                 -- Positions-ID
-    CREATION_DATE AS "Erstellungsdatum Position",          -- Erstellungsdatum Position
-    NAME AS Bezeichnung,                                   -- Positionsname
-    DESCRIPTION AS Beschreibung,                           -- Beschreibung
-    UNIT_PRICE AS Einzelpreis,                             -- Preis pro Einheit
-    AREA AS Flaeche,                                       -- Fläche/Menge
-FROM POSITIONS;
+    p.POS_ID AS PositionsID,
+    p.CREATION_DATE AS "Erstellungsdatum Position",
+    p.NAME AS Bezeichnung,
+    p.DESCRIPTION AS Beschreibung,
+    p.UNIT_PRICE AS Einzelpreis,
+    p.AREA AS Flaeche
+FROM
+    POSITIONS p;

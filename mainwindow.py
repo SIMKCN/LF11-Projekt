@@ -11,6 +11,7 @@ from io import BytesIO
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
+import aspose
 import pyzipper
 from PyQt6.QtPdf import QPdfDocument
 from PyQt6.QtPdfWidgets import QPdfView
@@ -20,6 +21,11 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 import win32api
 import win32print
+import os
+import win32print
+import aspose.pdf as ap
+import aspose.pydrawing as drawing
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 
 # IMPORT PyQt6 Packages
 from PyQt6.QtPrintSupport import QPrinter, QPrintPreviewDialog, QPrintDialog
@@ -1882,27 +1888,18 @@ class MainWindow(QMainWindow):
         return export_data
 
     def on_drucken_clicked(self):
-        idx = self.tv_rechnungen.currentIndex()
-        if not idx.isValid():
-            show_error(self, "Keine Auswahl", "Bitte zuerst eine Rechnung auswählen!")
-            return
-        invoice_nr = idx.sibling(idx.row(), 0).data()
-        pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
-        if not os.path.exists(pdf_path):
-            self.create_and_show_invoice_pdf(invoice_nr)
+        try:
+            idx = self.tv_rechnungen.currentIndex()
+            if not idx.isValid():
+                show_error(self, "Keine Auswahl", "Bitte zuerst eine Rechnung auswählen!")
+                return
 
-        # Drucker und Dialog, aber KEINE Vorschau/rendern!
-        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        print_dialog = QPrintDialog(printer)
-        print_dialog.setWindowTitle("Rechnung drucken")
-        if print_dialog.exec() == QPrintDialog.DialogCode.Accepted:
-            # Öffnet Standartdruckprogramm und sendet direkt an drucker
-            print("Gewählter Drucker:", printer.printerName())
-            win32api.ShellExecute(
-                0,
-                "printto",
-                pdf_path,
-                f'"{printer.printerName()}"',
-                ".",
-                0
-            )
+            invoice_nr = idx.sibling(idx.row(), 0).data()
+            pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+
+            if not os.path.exists(pdf_path):
+                self.create_and_show_invoice_pdf(invoice_nr)
+
+            os.startfile(pdf_path, 'open')
+        except Exception as e:
+            show_error(self, "Fehler beim Drucken", str(e))

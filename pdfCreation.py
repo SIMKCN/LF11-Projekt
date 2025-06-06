@@ -390,7 +390,7 @@ class InvoicePDFBuilder:
         
         # Calculate values
         netto = self.netto_summe
-        ust = netto * 0.19
+        ust = netto * float(self._extract(self.invoice, "VAT_RATE_POSITIONS").strip())
         brutto = netto + ust
         
         # Draw table
@@ -418,7 +418,7 @@ class InvoicePDFBuilder:
         
         closing = [
             "Vielen Dank für Ihren Auftrag.",
-            f"Überweisen Sie bitte den offenen Betrag in Höhe von {self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
+            f"Überweisen Sie bitte den offenen Betrag in Höhe von {(self.netto_summe * float(self._extract(self.invoice, "VAT_RATE_POSITIONS").strip())) + self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
             ""
         ]
         
@@ -438,7 +438,7 @@ class InvoicePDFBuilder:
         self.y -= 10*mm
 
     def _draw_footer(self):
-        self._check_page_break(20*mm)
+        self._check_page_break(40*mm)
 
         footer = [
             "Mit freundlichen Grüßen",

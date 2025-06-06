@@ -1587,7 +1587,7 @@ class MainWindow(QMainWindow):
 
     def show_invoice_pdf(self, pdf_path):
         self.pdf_document.load(pdf_path)
-        self.pdf_view.setPageMode(QPdfView.PageMode.SinglePage)
+        self.pdf_view.setPageMode(QPdfView.PageMode.MultiPage)
         self.pdf_view.setZoomMode(QPdfView.ZoomMode.FitInView)
 
         if self.w_rechnung_hinzufuegen.isVisible():

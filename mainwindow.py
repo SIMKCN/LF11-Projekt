@@ -1615,7 +1615,7 @@ class MainWindow(QMainWindow):
 
         pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
         builder = InvoicePDFBuilder(xml_string, logo_bytes)
-        builder.build(EXPORT_OUTPUT_PATH + r"\rechnung.pdf")
+        builder.build(pdf_path)
         self.show_invoice_pdf(pdf_path)
 
     def create_missing_invoice_pdfs(self):

@@ -6,14 +6,6 @@ from io import BytesIO
 import xml.etree.ElementTree as ET
 
 
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
-from io import BytesIO
-import xml.etree.ElementTree as ET
-
-
 class InvoicePDFBuilder:
     def __init__(self, xml_string: str, logo_bytes: bytes):
         self.root = ET.fromstring(xml_string)

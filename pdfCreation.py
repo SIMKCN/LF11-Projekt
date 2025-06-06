@@ -15,8 +15,10 @@ class InvoicePDFBuilder:
         self.margin = 20 * mm
         self.line_height = 5 * mm
         self.y = self.height - self.margin
+        self.page_num = 1
+        self.min_y = 40 * mm  # Minimaler Y-Wert vor Seitenumbruch
 
-        # Parse all necessary XML sections
+        # Parse XML
         self.invoice = self.root.find("invoice")
         self.customer = self.root.find("customer")
         self.provider = self.root.find("service_provider")
@@ -28,6 +30,20 @@ class InvoicePDFBuilder:
     def _extract(self, element, tag):
         child = element.find(tag)
         return child.text.strip() if child is not None and child.text else ""
+
+    # Prüft, ob ausreichend Platz vorhanden ist und erstellt ggf. neue Seite.
+    def _check_page_break(self, required_height):
+        if self.y - required_height < self.min_y:
+            self._new_page()
+
+    # Erstellt eine neue Seite und zeichnet Kopf- und Fußzeilen-
+    def _new_page(self):
+        self._draw_footer_bar()  # Fußzeile für aktuelle Seite
+        self.canvas.showPage()  # Beendet aktuelle Seite
+        self.page_num += 1
+        self.y = self.height - self.margin  # Setzt Y-Position zurück
+        self._draw_header()  # Kopfzeile für neue Seite
+        self._draw_footer_bar()  # Fußzeile für neue Seite
 
     def _draw_text(self, x, y, text, size=10, bold=False):
         font = "Helvetica-Bold" if bold else "Helvetica"
@@ -60,6 +76,8 @@ class InvoicePDFBuilder:
         self.y -= 15 * mm
 
     def _draw_recipient(self):
+        self._check_page_break(25 * mm)  # 3 Zeilen + Abstand
+        
         self._draw_text(self.margin, self.y, f"{self._extract(self.customer, 'FIRST_NAME')} {self._extract(self.customer, 'LAST_NAME')}")
         self.y -= self.line_height
         self._draw_text(self.margin, self.y, f"{self._extract(self.customer, 'STREET')} {self._extract(self.customer, 'NUMBER')}")
@@ -68,6 +86,8 @@ class InvoicePDFBuilder:
         self.y -= 10 * mm
 
     def _draw_sender(self):
+        self._check_page_break(45 * mm)  # 7 Zeilen + Abstände
+        
         self._draw_text(self.margin, self.y, self._extract(self.provider, "PROVIDER_NAME"))
         self.y -= self.line_height
         self._draw_text(self.margin, self.y, self._extract(self.ceo, "CEO_NAME"))
@@ -83,6 +103,8 @@ class InvoicePDFBuilder:
             self.y -= self.line_height
 
     def _draw_invoice_metadata(self):
+        self._check_page_break(20 * mm)  # 3 Zeilen + Abstand
+        
         self.y -= 5 * mm
         self._draw_text(self.margin, self.y, "Rechnung", size=14, bold=True)
         self.y -= 8 * mm
@@ -98,17 +120,22 @@ class InvoicePDFBuilder:
             self.y -= self.line_height
 
     def _draw_greeting(self):
+        self._check_page_break(10 * mm)  # 2 Zeilen
+        
         self._draw_text(self.margin, self.y, f"Sehr geehrter Herr {self._extract(self.customer, 'LAST_NAME')},")
         self.y -= self.line_height
         self._draw_text(self.margin, self.y, "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.")
         self.y -= 10 * mm
 
     def _draw_positions(self):
+        self._check_page_break(10 * mm)  # Mindestplatz für Überschrift
+        
         self._draw_text(self.margin, self.y, "Pos. Bezeichnung Preis", bold=True)
         self.y -= self.line_height
 
         self.netto_summe = 0
         for idx, pos in enumerate(self.positions, 1):
+            # Schätze benötigten Platz für diese Position
             name = self._extract(pos, "NAME")
             desc = self._extract(pos, "DESCRIPTION")
             area = float(self._extract(pos, "AREA") or 0)
@@ -116,6 +143,19 @@ class InvoicePDFBuilder:
             total = area * unit_price
             self.netto_summe += total
 
+            # Berechne benötigte Höhe
+            lines_needed = 2  # Grund: Positionszeile + Flächenzeile
+            if desc:
+                lines_needed += len(desc.splitlines())
+            required_space = lines_needed * self.line_height + 10 * mm
+            
+            # Prüfe Seitenumbruch
+            if self.y - required_space < self.min_y:
+                self._new_page()
+                self._draw_text(self.margin, self.y, "Pos. Bezeichnung Preis", bold=True)
+                self.y -= self.line_height
+
+            # Zeichne Position
             self._draw_text(self.margin, self.y, f"Pos. {idx} {name}")
             self.y -= self.line_height
 
@@ -129,6 +169,8 @@ class InvoicePDFBuilder:
             self.y -= 2 * self.line_height
 
     def _draw_totals(self):
+        self._check_page_break(30 * mm)  # Platz für Summenblock
+        
         self.y -= 2 * self.line_height
         vat_rate = float(self._extract(self.invoice, "VAT_RATE_POSITIONS") or 19)
         vat = self.netto_summe * vat_rate / 100
@@ -150,6 +192,7 @@ class InvoicePDFBuilder:
         vat_labor_rate = float(self._extract(self.invoice, "VAT_RATE_LABOR") or 19)
 
         if labor_cost > 0:
+            self._check_page_break(15 * mm)  # Zusätzliche 2 Zeilen
             lohnsteueranteil = labor_cost * vat_labor_rate / (100 + vat_labor_rate)
             self._draw_text(self.margin, self.y, f"Überweisen Sie bitte den offenen Betrag in Höhe von {brutto:.2f} € auf das unten aufgeführte Geschäftskonto.")
             self.y -= self.line_height
@@ -157,6 +200,8 @@ class InvoicePDFBuilder:
             self.y -= 10 * mm
 
     def _draw_closing(self):
+        self._check_page_break(30 * mm)  # Platz für Grußformel
+        
         self._draw_text(self.margin, self.y, "Mit freundlichen Grüßen")
         self.y -= self.line_height
         self._draw_text(self.margin, self.y, self._extract(self.ceo, "CEO_NAME"))
@@ -168,6 +213,8 @@ class InvoicePDFBuilder:
         self.y -= 10 * mm
 
     def _draw_footer(self):
+        self._check_page_break(70 * mm)  # Geschätzter Platz für Footer
+        
         self._draw_text(self.margin, self.y, "Sitz des Unternehmens:")
         self.y -= self.line_height
         self._draw_text(self.margin, self.y, self._extract(self.provider, "PROVIDER_NAME"))
@@ -201,7 +248,7 @@ class InvoicePDFBuilder:
     def _draw_footer_bar(self):
         self.canvas.setFont("Helvetica", 8)
         self.canvas.drawString(self.margin, 10 * mm, "BackOffice 2020 – Das ideale Rechnungsprogramm für Handwerksbetriebe")
-        self.canvas.drawRightString(self.width - self.margin, 10 * mm, "Seite 1 von 1")
+        self.canvas.drawRightString(self.width - self.margin, 10 * mm, f"Seite {self.page_num}")
 
     def build(self, output_path: str):
         self.canvas = canvas.Canvas(output_path, pagesize=A4)
@@ -214,6 +261,6 @@ class InvoicePDFBuilder:
         self._draw_totals()
         self._draw_closing()
         self._draw_footer()
-        self._draw_footer_bar()
+        self._draw_footer_bar()  # Für erste Seite
         self.canvas.save()
         return output_path

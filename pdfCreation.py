@@ -8,6 +8,9 @@ from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Paragraph
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 class InvoicePDFBuilder:
     def __init__(self, xml_string: str, logo_bytes: bytes):
@@ -19,21 +22,72 @@ class InvoicePDFBuilder:
         self.line_height = 5 * mm
         self.y = self.height - self.margin
         self.page_num = 1
-        self.min_y = 40 * mm
+        self.min_y = 20 * mm
         self.styles = getSampleStyleSheet()
         
-        # Parse XML
-        self.invoice = self.root.find("invoice")
-        self.customer = self.root.find("customer")
-        self.provider = self.root.find("service_provider")
-        self.ceo = self.root.find("ceos/ceo")
+        # Custom styles
+        self.styles.add(ParagraphStyle(
+            name='NormalWrap',
+            fontName='Helvetica',
+            fontSize=10,
+            leading=12,
+            alignment=TA_LEFT
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='RightWrap',
+            fontName='Helvetica',
+            fontSize=10,
+            leading=12,
+            alignment=TA_RIGHT
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='CenterWrap',
+            fontName='Helvetica',
+            fontSize=10,
+            leading=12,
+            alignment=TA_CENTER
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='Bold',
+            fontName='Helvetica-Bold',
+            fontSize=10,
+            leading=12,
+            alignment=TA_LEFT
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='RightBold',
+            fontName='Helvetica-Bold',
+            fontSize=10,
+            leading=12,
+            alignment=TA_RIGHT
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='CenterBold',
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            leading=14,
+            alignment=TA_CENTER
+        ))
+        
+        # Parse XML with null checks
+        self.invoice = self.root.find("invoice") or ET.Element("dummy")
+        self.customer = self.root.find("customer") or ET.Element("dummy")
+        self.provider = self.root.find("service_provider") or ET.Element("dummy")
+        self.ceo = self.root.find("ceos/ceo") or ET.Element("dummy")
         positions_elem = self.root.find("positions")
         self.positions = positions_elem.findall("position") if positions_elem is not None else []
-        self.bank = self.root.find("bank")
+        self.bank = self.root.find("bank") or ET.Element("dummy")
         
-    def _extract(self, element, tag):
+    def _extract(self, element, tag, default=""):
+        if element is None:
+            return default
         child = element.find(tag)
-        return child.text.strip() if child is not None and child.text else ""
+        return child.text.strip() if child is not None and child.text else default
 
     def _check_page_break(self, required_height):
         if self.y - required_height < self.min_y:
@@ -51,71 +105,163 @@ class InvoicePDFBuilder:
         font = "Helvetica-Bold" if bold else "Helvetica"
         self.canvas.setFont(font, size)
         self.canvas.drawString(x, y, text)
+        return self.canvas.stringWidth(text, font, size)
 
-    def _draw_centered(self, y, text, size=12, bold=True):
+    def _draw_centered(self, y, text, size=10, bold=False):
         font = "Helvetica-Bold" if bold else "Helvetica"
         self.canvas.setFont(font, size)
         text_width = self.canvas.stringWidth(text, font, size)
         x = (self.width - text_width) / 2
         self.canvas.drawString(x, y, text)
-        return y - self.line_height
+        return text_width
 
     def _draw_right(self, x, y, text, size=10, bold=False):
         font = "Helvetica-Bold" if bold else "Helvetica"
         self.canvas.setFont(font, size)
-        self.canvas.drawRightString(x, y, text)
+        text_width = self.canvas.stringWidth(text, font, size)
+        self.canvas.drawString(x - text_width, y, text)
+        return text_width
+
+    def _draw_paragraph(self, x, y, text, style, max_width):
+        if not text:
+            return 0
+        p = Paragraph(text, style)
+        w, h = p.wrap(max_width, 1000)
+        if w > max_width or h > 1000:  # Fallback if text too long
+            text = text[:50] + '...'
+            p = Paragraph(text, style)
+            w, h = p.wrap(max_width, 1000)
+        p.drawOn(self.canvas, x, y - h)
+        return h
 
     def _draw_logo(self):
-        if self.logo_bytes:
-            try:
-                logo = ImageReader(BytesIO(self.logo_bytes))
-                self.canvas.drawImage(logo, self.width - self.margin - 40*mm, 
-                                     self.height - self.margin - 15*mm, 
-                                     width=40*mm, preserveAspectRatio=True)
-            except Exception:
-                pass
+        if not self.logo_bytes:
+            return 0
+            
+        try:
+            logo = ImageReader(BytesIO(self.logo_bytes))
+            logo_width = 60 * mm
+            
+            # Always position on right with margin
+            logo_x = self.width - self.margin - logo_width
+            
+            # Fixed position below header
+            logo_y = self.height - self.margin - 20 * mm
+            logo_height = 20 * mm
+                
+            self.canvas.drawImage(logo, logo_x, logo_y, 
+                                 width=logo_width, 
+                                 height=logo_height,
+                                 preserveAspectRatio=True,
+                                 mask='auto',
+                                 anchor = 'ne')
+            return logo_height
+        except Exception as e:
+            print(f"Logo error: {str(e)}")
+            return 0
 
     def _draw_header(self):
-        self.y = self.height - self.margin - 5*mm
-        self.y = self._draw_centered(self.y, self._extract(self.provider, "PROVIDER_NAME").upper(), 10, True)
-        self._draw_centered(self.y, 
-            f"{self._extract(self.provider, 'PROVIDER_NAME')} • {self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')} • "
-            f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}", 
-            7, False
-        )
-        self.y -= 15*mm
+        # Draw logo first to reserve space
+        logo_height = self._draw_logo() or 0
+        self.y = self.height - self.margin - 5 * mm
+        
+        # Provider name with dynamic wrapping
+        provider_name = self._extract(self.provider, "PROVIDER_NAME")
+        max_width = self.width - 2*self.margin - 45*mm  # Reserve space for logo
+        
+        # Center text only if it fits, otherwise left-align
+        if self.canvas and self.canvas.stringWidth(provider_name, "Helvetica-Bold", 12) < max_width:
+            h = self._draw_paragraph(self.margin, self.y, provider_name.upper(), ParagraphStyle(name = 'ProviderName', fontName='Helvetica-Bold', fontSize=12, leading=12, alignment=TA_LEFT), 105*mm)
+            if h > 0:
+                self.y -= h + 1*mm
+
+            self.y -= 15 * mm
+        else:
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                provider_name.upper(), 
+                self.styles['Bold'], 
+                max_width
+            )
+            self.y -= h + 2*mm if h > 0 else 15*mm
 
     def _draw_recipient(self):
-        self._check_page_break(25*mm)
-        self._draw_text(self.margin, self.y, f"{self._extract(self.customer, 'FIRST_NAME')} {self._extract(self.customer, 'LAST_NAME')}")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.customer, 'STREET')} {self._extract(self.customer, 'NUMBER')}")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.customer, 'ZIP')} {self._extract(self.customer, 'CITY')}")
-        self.y -= 20*mm
+        self._check_page_break(40*mm)
+        
+        # Customer address with proper wrapping
+        elements = [
+            f"{self._extract(self.customer, 'FIRST_NAME')} {self._extract(self.customer, 'LAST_NAME')}",
+            f"{self._extract(self.customer, 'STREET')} {self._extract(self.customer, 'NUMBER')}",
+            f"{self._extract(self.customer, 'ZIP')} {self._extract(self.customer, 'CITY')}"
+        ]
+        
+        for text in elements:
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                text, 
+                self.styles['NormalWrap'], 
+                80*mm
+            )
+            if h > 0:
+                self.y -= h + 1*mm
+            
+        self.y -= 15*mm
 
     def _draw_invoice_metadata(self):
-        self._draw_centered(self.y, "RECHNUNG", 16, True)
-        self.y -= 15*mm
+        self.y -= 20*mm
+        self._draw_text(self.margin, self.y, "RECHNUNG", 16, True)
+        self.y -= 10*mm
         
-        meta_y = self.height - self.margin - 40*mm
-        self._draw_right(self.width - self.margin, meta_y, f"Rechnungsnummer: {self._extract(self.invoice, 'INVOICE_NR')}")
-        meta_y -= self.line_height
-        self._draw_right(self.width - self.margin, meta_y, f"Kundennummer: {self._extract(self.invoice, 'FK_CUSTID')}")
-        meta_y -= self.line_height
-        self._draw_right(self.width - self.margin, meta_y, f"Datum: {self._extract(self.invoice, 'CREATION_DATE')}")
+        invoice_data = [
+            f"Rechnungsnummer: {self._extract(self.invoice, 'INVOICE_NR')}",
+            f"Kundennummer: {self._extract(self.invoice, 'FK_CUSTID')}",
+            f"Datum: {self._extract(self.invoice, 'CREATION_DATE')}"
+        ]
+
+        for text in invoice_data:
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                text, 
+                self.styles['NormalWrap'], 
+                80*mm
+            )
+            if h > 0:
+                self.y -= h + 1*mm
+        self.y -= 10*mm
+        
 
     def _draw_sender(self):
-        self._check_page_break(45*mm)
-        self._draw_text(self.margin, self.y, self._extract(self.provider, "PROVIDER_NAME"), bold=True)
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, self._extract(self.ceo, "CEO_NAME"))
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')}")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}")
-        self.y -= 8*mm
+        
+        # Sender info with wrapping
+        elements = [
+            (self._extract(self.provider, "PROVIDER_NAME"), True),
+            (self._extract(self.ceo, "CEO_NAME"), False),
+            (f"{self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')}", False),
+            (f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}", False)
+        ]
 
+        meta_y = self.height - self.margin - 30*mm
+
+        for text, bold in elements:
+            if not text:
+                continue
+            style = self.styles['RightBold'] if bold else self.styles['RightWrap']
+            h = self._draw_paragraph(
+                self.width - self.margin - 80*mm, 
+                meta_y, 
+                text, 
+                style, 
+                80*mm
+            )
+            if h > 0:
+                meta_y -= h + 1*mm
+            
+        meta_y -= 8*mm
+
+        # Contact info with wrapping
         contacts = [
             ("Mobil:", self._extract(self.provider, "MOBILTELNR")),
             ("Tel.:", self._extract(self.provider, "TELNR")),
@@ -125,157 +271,236 @@ class InvoicePDFBuilder:
         ]
         
         for label, value in contacts:
-            self._draw_text(self.margin, self.y, f"{label} {value}")
-            self.y -= self.line_height
-
-        self.y -= 10*mm
+            if not value:
+                continue
+            text = f"{label} {value}"
+            h = self._draw_paragraph(
+                self.width - self.margin - 80*mm, 
+                meta_y, 
+                text, 
+                self.styles['RightWrap'], 
+                80*mm
+            )
+            if h > 0:
+                meta_y -= h + 1*mm
 
     def _draw_greeting(self):
-        self._check_page_break(15*mm)
-        self._draw_text(self.margin, self.y, f"Sehr geehrter Herr {self._extract(self.customer, 'LAST_NAME')},")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.")
-        self.y -= 15*mm
+        self._check_page_break(20*mm)
+        
+        last_name = self._extract(self.customer, 'LAST_NAME')
+        greeting = [
+            f"Sehr geehrter Herr {last_name}," if last_name else "Sehr geehrter Kunde,",
+            "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen."
+        ]
+        
+        for text in greeting:
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                text, 
+                self.styles['NormalWrap'], 
+                self.width - 2*self.margin
+            )
+            if h > 0:
+                self.y -= h + 1*mm
+            
+        self.y -= 10*mm
 
     def _draw_positions(self):
-        # Tabellenüberschrift
-        self._check_page_break(10*mm)
+        # Table header
+        self._check_page_break(15*mm)
         self._draw_text(self.margin, self.y, "Pos.", bold=True)
         self._draw_text(self.margin + 20*mm, self.y, "Bezeichnung", bold=True)
         self._draw_right(self.width - self.margin, self.y, "Preis", bold=True)
         self.y -= 8*mm
         
-        # Positionsdaten
+        # Positions data
         self.netto_summe = 0
         for idx, pos in enumerate(self.positions, 1):
             name = self._extract(pos, "NAME")
             desc = self._extract(pos, "DESCRIPTION")
-            area = float(self._extract(pos, "AREA") or 0)
-            unit_price = float(self._extract(pos, "UNIT_PRICE") or 0)
-            total = area * unit_price
-            self.netto_summe += total
+            try:
+                area = float(self._extract(pos, "AREA") or 0)
+                unit_price = float(self._extract(pos, "UNIT_PRICE") or 0)
+                total = area * unit_price
+                self.netto_summe += total
+            except:
+                area = 0
+                unit_price = 0
+                total = 0
             
-            # Prüfe Platz für diese Position (3-5 Zeilen)
-            lines_needed = 3 + len(desc.splitlines()) if desc else 3
-            required_height = lines_needed * self.line_height
+            # Calculate space needed
+            desc_lines = len(desc.split('\n')) if desc else 1
+            required_height = (3 + desc_lines) * self.line_height
             
             if self.y - required_height < self.min_y:
                 self._new_page()
-                # Überschrift auf neuer Seite neu zeichnen
+                # Re-draw header
                 self._draw_text(self.margin, self.y, "Pos.", bold=True)
                 self._draw_text(self.margin + 20*mm, self.y, "Bezeichnung", bold=True)
                 self._draw_right(self.width - self.margin, self.y, "Preis", bold=True)
                 self.y -= 8*mm
             
-            # Positionskopf
-            self._draw_text(self.margin, self.y, f"Pos. {idx} {name}")
-            self.y -= self.line_height
+            # Position header
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                f"Pos. {idx} {name}", 
+                self.styles['Bold'], 
+                self.width - 2*self.margin
+            )
+            if h > 0:
+                self.y -= h + 2*mm
             
-            # Beschreibung (mehrzeilig)
+            # Description
             if desc:
-                for line in desc.splitlines():
-                    self._draw_text(self.margin + 5*mm, self.y, line)
-                    self.y -= self.line_height
-            
-            # Mengenangabe und Preis
-            self._draw_text(self.margin + 5*mm, self.y, f"{area:.2f} m² EP: {unit_price:.2f} €")
+                h = self._draw_paragraph(
+                    self.margin + 5*mm, 
+                    self.y, 
+                    desc, 
+                    self.styles['NormalWrap'], 
+                    self.width - 2*self.margin - 30*mm
+                )
+                if h > 0:
+                    self.y -= h + 2*mm  # This is the space after description
+                self.y -= 3*mm  # Add this line to create additional spacing
+
+            # Quantity and price
+            qty_text = f"{area:.2f} m² EP: {unit_price:.2f} €"
+            self._draw_text(self.margin + 5*mm, self.y, qty_text)
             self._draw_right(self.width - self.margin, self.y, f"{total:.2f} €")
-            self.y -= 2*self.line_height
+            self.y -= 3*self.line_height
 
     def _draw_totals(self):
         self._check_page_break(30*mm)
-        vat_rate = float(self._extract(self.invoice, "VAT_RATE_POSITIONS") or 19)
-        vat = self.netto_summe * vat_rate / 100
-        brutto = self.netto_summe + vat
-        labor_cost = float(self._extract(self.invoice, "LABOR_COST") or 0)
-        vat_labor = labor_cost * 19 / 119  # Enthaltene MwSt in Lohnkosten
+        self.y -= 10*mm
         
-        # Summenblock
-        self.y -= 5*mm
-        self._draw_right(self.width - 60*mm, self.y, "Nettobetrag:")
-        self._draw_right(self.width - self.margin, self.y, f"{self.netto_summe:.2f} €")
-        self.y -= self.line_height
+        # Calculate values
+        netto = self.netto_summe
+        ust = netto * 0.19
+        brutto = netto + ust
         
-        self._draw_right(self.width - 60*mm, self.y, f"zzgl. {vat_rate:.0f} % MwSt.:")
-        self._draw_right(self.width - self.margin, self.y, f"{vat:.2f} €")
-        self.y -= self.line_height
+        # Draw table
+        data = [
+            ["Nettobetrag:", f"{netto:.2f} €"],
+            ["Umsatzsteuer 19%:", f"{ust:.2f} €"],
+            ["Rechnungsbetrag:", f"{brutto:.2f} €"]
+        ]
         
-        self._draw_right(self.width - 60*mm, self.y, "Bruttobetrag:", bold=True)
-        self._draw_right(self.width - self.margin, self.y, f"{brutto:.2f} €", bold=True)
-        self.y -= 15*mm
+        table = Table(data, colWidths=[100*mm, 50*mm])
+        table.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 10),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
         
-        # Zahlungshinweis
-        self._draw_text(self.margin, self.y, 
-            f"Überweisen Sie bitte den offenen Betrag in Höhe von {brutto:.2f} € auf das unten aufgeführte Geschäftskonto.")
-        self.y -= self.line_height
-        if labor_cost > 0:
-            self._draw_text(self.margin, self.y, 
-                f"Im Bruttobetrag sind {labor_cost:.2f} € Lohnkosten enthalten. Die darin enthaltene Mehrwertsteuer beträgt {vat_labor:.2f} €.")
-            self.y -= 15*mm
+        table.wrapOn(self.canvas, self.width - 2*self.margin, self.height)
+        table.drawOn(self.canvas, self.width - self.margin - 150*mm, self.y - 20*mm)
+        self.y -= 40*mm
 
     def _draw_closing(self):
-        self._check_page_break(30*mm)
-        self._draw_text(self.margin, self.y, "Mit freundlichen Grüßen")
-        self.y -= 2*self.line_height
-        self._draw_text(self.margin, self.y, self._extract(self.ceo, "CEO_NAME"))
-        self.y -= 15*mm
+        self._check_page_break(20*mm)
         
-        # Fußnoten
-        self._draw_text(self.margin, self.y, "Sie sind verpflichtet, die Rechnung zu Steuerzwecken zwei Jahre lang aufzubewahren.")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"Die aufgeführten Arbeiten wurden ausgeführt im {self._extract(self.invoice, 'SERVICE_PERIOD')}.")
-        self.y -= 20*mm
+        # Only include bank details if they exist
+        bank_details = []
+        if self._extract(self.bank, 'BANK_NAME'):
+            bank_details.append(f"Bank: {self._extract(self.bank, 'BANK_NAME')}")
+        if self._extract(self.bank, 'IBAN'):
+            bank_details.append(f"IBAN: {self._extract(self.bank, 'IBAN')}")
+        if self._extract(self.bank, 'BIC'):
+            bank_details.append(f"BIC: {self._extract(self.bank, 'BIC')}")
+        if self._extract(self.bank, 'ACCOUNT_HOLDER'):
+            bank_details.append(f"Kontoinhaber: {self._extract(self.bank, 'ACCOUNT_HOLDER')}")
+        
+        closing = [
+            "Vielen Dank für Ihren Auftrag.",
+            f"Bitte überweisen Sie den Rechnungsbetrag innerhalb von {self._extract(self.invoice, 'PAYMENT_TERM', '14')} Tagen auf folgendes Konto:",
+            ""
+        ] + bank_details
+        
+        for text in closing:
+            if not text:
+                continue
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                text, 
+                self.styles['NormalWrap'], 
+                self.width - 2*self.margin
+            )
+            if h > 0:
+                self.y -= h + 1*mm
+            
+        self.y -= 10*mm
 
     def _draw_footer(self):
-        self._check_page_break(70*mm)
-        # Drei Spalten: Sitz, Bank, Geschäftsführung
-        col_width = (self.width - 2*self.margin) / 3
+        self._check_page_break(20*mm)
         
-        # Spalte 1: Sitz des Unternehmens
-        self._draw_text(self.margin, self.y, "Sitz des Unternehmens:", bold=True)
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, self._extract(self.provider, "PROVIDER_NAME"))
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')}")
-        self.y -= self.line_height
-        self._draw_text(self.margin, self.y, f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}")
-        self.y += 4*self.line_height  # Zurück zur Grundlinie
+        footer = [
+            "Mit freundlichen Grüßen",
+            "",
+            f"{self._extract(self.provider, 'PROVIDER_NAME')}",
+            "",
+            f"{self._extract(self.ceo, 'CEO_NAME')} - Geschäftsführung" if self._extract(self.ceo, 'CEO_NAME') else ""
+        ]
         
-        # Spalte 2: Bankverbindung
-        self._draw_text(self.margin + col_width, self.y, "Bankverbindung:", bold=True)
-        self.y -= self.line_height
-        if self.bank is not None:
-            self._draw_text(self.margin + col_width, self.y, self._extract(self.bank, "BANK_NAME"))
-            self.y -= self.line_height
-            self._draw_text(self.margin + col_width, self.y, f"IBAN: {self._extract(self.bank, 'IBAN')}")
-            self.y -= self.line_height
-            self._draw_text(self.margin + col_width, self.y, f"BIC: {self._extract(self.bank, 'BIC')}")
-        else:
-            self._draw_text(self.margin + col_width, self.y, "(nicht angegeben)")
-        self.y += 3*self.line_height
-        
-        # Spalte 3: Geschäftsführung
-        self._draw_text(self.margin + 2*col_width, self.y, "Geschäftsführung:", bold=True)
-        self.y -= self.line_height
-        self._draw_text(self.margin + 2*col_width, self.y, self._extract(self.ceo, "CEO_NAME"))
-        self.y -= self.line_height
-        self._draw_text(self.margin + 2*col_width, self.y, f"St.-Nr.: {self._extract(self.ceo, 'ST_NR')}")
-        self.y -= self.line_height
-        self._draw_text(self.margin + 2*col_width, self.y, f"USt-IdNr.: {self._extract(self.invoice, 'FK_UST_IDNR')}")
+        for text in footer:
+            if not text:
+                continue
+            h = self._draw_paragraph(
+                self.margin, 
+                self.y, 
+                text, 
+                self.styles['NormalWrap'], 
+                self.width - 2*self.margin
+            )
+            if h > 0:
+                self.y -= h + 1*mm
 
     def _draw_footer_bar(self):
-        self.canvas.setFont("Helvetica", 8)
-        self.canvas.drawString(self.margin, 10*mm, 
-            "BackOffice 2020 – Das ideale Rechnungsprogramm für Handwerksbetriebe")
-        self.canvas.drawRightString(self.width - self.margin, 10*mm, f"Seite {self.page_num}")
+        # Draw separator line
+        self.canvas.setStrokeColor(colors.black)
+        self.canvas.setLineWidth(0.5)
+        self.canvas.line(self.margin, self.min_y + 5*mm, self.width - self.margin, self.min_y + 5*mm)
+        
+        # Draw page number
+        footer_text = f"Seite {self.page_num}"
+        self._draw_centered(self.min_y, footer_text, 8)
+        
+        # Draw footer info
+        provider_name = self._extract(self.provider, 'PROVIDER_NAME')
+        street = self._extract(self.provider, 'STREET')
+        number = self._extract(self.provider, 'NUMBER')
+        zip_code = self._extract(self.provider, 'ZIP')
+        city = self._extract(self.provider, 'CITY')
+        tel = self._extract(self.provider, 'TELNR')
+        email = self._extract(self.provider, 'EMAIL')
+        
+        footer_info = " | ".join(filter(None, [
+            provider_name,
+            f"{street} {number}" if street or number else None,
+            f"{zip_code} {city}" if zip_code or city else None,
+            f"Tel: {tel}" if tel else None,
+            f"Email: {email}" if email else None
+        ]))
+        
+        if footer_info:
+            self._draw_paragraph(
+                self.margin, 
+                self.min_y - 5*mm, 
+                footer_info, 
+                self.styles['CenterWrap'], 
+                self.width - 2*self.margin
+            )
 
     def build(self, output_path: str):
         self.canvas = canvas.Canvas(output_path, pagesize=A4)
-        self._draw_logo()
         self._draw_header()
         self._draw_recipient()
-        self._draw_invoice_metadata()
         self._draw_sender()
+        self._draw_invoice_metadata()
         self._draw_greeting()
         self._draw_positions()
         self._draw_totals()
@@ -284,3 +509,4 @@ class InvoicePDFBuilder:
         self._draw_footer_bar()
         self.canvas.save()
         return output_path
+    

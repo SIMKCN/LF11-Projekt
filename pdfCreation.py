@@ -78,7 +78,8 @@ class InvoicePDFBuilder:
         self.invoice = self.root.find("invoice") or ET.Element("dummy")
         self.customer = self.root.find("customer") or ET.Element("dummy")
         self.provider = self.root.find("service_provider") or ET.Element("dummy")
-        self.ceo = self.root.find("ceos/ceo") or ET.Element("dummy")
+        ceo_elem = self.root.find("ceos")
+        self.ceos = ceo_elem.findall("ceo") if ceo_elem is not None else []
         positions_elem = self.root.find("positions")
         self.positions = positions_elem.findall("position") if positions_elem is not None else []
         self.bank = self.root.find("bank") or ET.Element("dummy")
@@ -237,8 +238,13 @@ class InvoicePDFBuilder:
         
         # Sender info with wrapping
         elements = [
-            (self._extract(self.provider, "PROVIDER_NAME"), True),
-            (self._extract(self.ceo, "CEO_NAME"), False),
+            (self._extract(self.provider, "PROVIDER_NAME"), True)
+        ]
+
+        for ceo in self.ceos:
+            elements += [(f"{self._extract(ceo, "CEO_NAME")}", False)]
+
+        elements += [
             (f"{self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')}", False),
             (f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}", False)
         ]
@@ -342,10 +348,17 @@ class InvoicePDFBuilder:
                 self.y -= 8*mm
             
             # Position header
-            h = self._draw_paragraph(
+            self._draw_paragraph(
                 self.margin, 
                 self.y, 
-                f"Pos. {idx} {name}", 
+                f"Pos. {idx}", 
+                self.styles['Bold'], 
+                self.width - 2*self.margin
+            )
+            h = self._draw_paragraph(
+                self.margin + 20*mm, 
+                self.y, 
+                f"{name}", 
                 self.styles['Bold'], 
                 self.width - 2*self.margin
             )
@@ -353,7 +366,7 @@ class InvoicePDFBuilder:
                 self.y -= h + 2*mm
             
             # Description
-            if desc:
+            if desc != None:
                 h = self._draw_paragraph(
                     self.margin + 5*mm, 
                     self.y, 
@@ -366,14 +379,14 @@ class InvoicePDFBuilder:
                 self.y -= 3*mm  # Add this line to create additional spacing
 
             # Quantity and price
-            qty_text = f"{area:.2f} m² EP: {unit_price:.2f} €"
+            qty_text = f"{area:.2f} m²         EP: {unit_price:.2f} €"
             self._draw_text(self.margin + 5*mm, self.y, qty_text)
             self._draw_right(self.width - self.margin, self.y, f"{total:.2f} €")
-            self.y -= 3*self.line_height
+            self.y -= self.line_height
 
     def _draw_totals(self):
         self._check_page_break(30*mm)
-        self.y -= 10*mm
+        self.y -= 5*mm
         
         # Calculate values
         netto = self.netto_summe
@@ -398,27 +411,16 @@ class InvoicePDFBuilder:
         
         table.wrapOn(self.canvas, self.width - 2*self.margin, self.height)
         table.drawOn(self.canvas, self.width - self.margin - 150*mm, self.y - 20*mm)
-        self.y -= 40*mm
+        self.y -= 30*mm
 
     def _draw_closing(self):
         self._check_page_break(20*mm)
         
-        # Only include bank details if they exist
-        bank_details = []
-        if self._extract(self.bank, 'BANK_NAME'):
-            bank_details.append(f"Bank: {self._extract(self.bank, 'BANK_NAME')}")
-        if self._extract(self.bank, 'IBAN'):
-            bank_details.append(f"IBAN: {self._extract(self.bank, 'IBAN')}")
-        if self._extract(self.bank, 'BIC'):
-            bank_details.append(f"BIC: {self._extract(self.bank, 'BIC')}")
-        if self._extract(self.bank, 'ACCOUNT_HOLDER'):
-            bank_details.append(f"Kontoinhaber: {self._extract(self.bank, 'ACCOUNT_HOLDER')}")
-        
         closing = [
             "Vielen Dank für Ihren Auftrag.",
-            f"Bitte überweisen Sie den Rechnungsbetrag innerhalb von {self._extract(self.invoice, 'PAYMENT_TERM', '14')} Tagen auf folgendes Konto:",
+            f"Überweisen Sie bitte den offenen Betrag in Höhe von {self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
             ""
-        ] + bank_details
+        ]
         
         for text in closing:
             if not text:
@@ -437,18 +439,18 @@ class InvoicePDFBuilder:
 
     def _draw_footer(self):
         self._check_page_break(20*mm)
-        
+
         footer = [
             "Mit freundlichen Grüßen",
             "",
-            f"{self._extract(self.provider, 'PROVIDER_NAME')}",
-            "",
-            f"{self._extract(self.ceo, 'CEO_NAME')} - Geschäftsführung" if self._extract(self.ceo, 'CEO_NAME') else ""
+            f"{self._extract(self.provider, 'PROVIDER_NAME')}"
         ]
         
+        for ceo in self.ceos:
+            ceo = f"{self._extract(ceo, 'CEO_NAME')} - Geschäftsführung" if self._extract(ceo, 'CEO_NAME') else ""
+            footer += [ceo]
+
         for text in footer:
-            if not text:
-                continue
             h = self._draw_paragraph(
                 self.margin, 
                 self.y, 
@@ -458,6 +460,9 @@ class InvoicePDFBuilder:
             )
             if h > 0:
                 self.y -= h + 1*mm
+            if text == "":
+                self.y -= self.line_height
+            
 
     def _draw_footer_bar(self):
         # Draw separator line

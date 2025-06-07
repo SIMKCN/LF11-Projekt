@@ -242,11 +242,11 @@ class InvoicePDFBuilder:
         ]
 
         for ceo in self.ceos:
-            elements += [(f"{self._extract(ceo, "CEO_NAME")}", False)]
+            elements += [(self._extract(ceo, "CEO_NAME"), False)]
 
         elements += [
-            (f"{self._extract(self.provider, 'STREET')} {self._extract(self.provider, 'NUMBER')}", False),
-            (f"{self._extract(self.provider, 'ZIP')} {self._extract(self.provider, 'CITY')}", False)
+            (self._extract(self.provider, 'STREET') + self._extract(self.provider, 'NUMBER'), False),
+            (self._extract(self.provider, 'ZIP') + self._extract(self.provider, 'CITY'), False)
         ]
 
         meta_y = self.height - self.margin - 30*mm
@@ -418,7 +418,7 @@ class InvoicePDFBuilder:
         
         closing = [
             "Vielen Dank für Ihren Auftrag.",
-            f"Überweisen Sie bitte den offenen Betrag in Höhe von {(self.netto_summe * float(self._extract(self.invoice, "VAT_RATE_POSITIONS").strip())) + self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
+            f"Überweisen Sie bitte den offenen Betrag in Höhe von {(self.netto_summe * float(self._extract(self.invoice, 'VAT_RATE_POSITIONS').strip())) + self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
             ""
         ]
         

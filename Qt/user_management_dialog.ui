@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>UserManagementDialog</class>
+ <widget class="QDialog" name="UserManagementDialog">
+  <property name="windowTitle">
+   <string>Nutzerverwaltung</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTableWidget" name="tableUsers">
+     <property name="columnCount">
+      <number>3</number>
+     </property>
+     <property name="horizontalHeaderLabels">
+      <stringlist>
+       <string>ID</string>
+       <string>Benutzername</string>
+       <string>Rechte</string>
+      </stringlist>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="btnAddUser">
+       <property name="text">
+        <string>Neuen Nutzer anlegen</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnEditUser">
+       <property name="text">
+        <string>Nutzer bearbeiten</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnDeleteUser">
+       <property name="text">
+        <string>Nutzer löschen</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

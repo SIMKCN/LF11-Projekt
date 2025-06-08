@@ -1,12 +1,9 @@
 # IMPORT other Packages
-import io
 import mimetypes
-import os
 import sqlite3
 import traceback
 from datetime import date
 import sys
-from io import BytesIO
 
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -14,32 +11,24 @@ import xml.etree.ElementTree as ET
 import pyzipper
 from PyQt6.QtPdf import QPdfDocument
 from PyQt6.QtPdfWidgets import QPdfView
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import mm
-import win32api
-import win32print
 import os
-import win32print
-import aspose.pdf as ap
-import aspose.pydrawing as drawing
-from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 
 # IMPORT PyQt6 Packages
-from PyQt6.QtPrintSupport import QPrinter, QPrintPreviewDialog, QPrintDialog
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QWidget, QDateEdit, \
     QDialog, QFormLayout, QFileDialog, QMessageBox, QVBoxLayout, QProgressDialog, QAbstractItemView
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QImage, QPainter
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
-from PIL import Image
+
+import config
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, APPLICATION_WORKING_PATH, EXPORT_OUTPUT_PATH
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, EXPORT_OUTPUT_PATH, \
+    IS_AUTHENTICATION_ACTIVE, IS_AUTHORIZATION_ACTIVE
+from auth.user_management_dialog import UserManagementDialog
 from utils import show_error, format_exception, show_info
-from logic import get_ceos_for_service_provider_form, get_service_provider_ceos
+from logic import get_service_provider_ceos
 from pdfCreation import InvoicePDFBuilder
 
 class PasswordDialog(QDialog):
@@ -288,6 +277,11 @@ class MainWindow(QMainWindow):
         self.btn_close_form = self.findChild(QPushButton, "btn_close_rechnung_hinzufuegen")
         if self.btn_close_form:
             self.btn_close_form.clicked.connect(self.pdf_view.show)
+
+        # Connect Signal for Click on 'btn_nutzer_verwalten'
+        self.btn_nutzer_verwalten = self.findChild(QPushButton, "btn_nutzer_verwalten")
+        if self.btn_nutzer_verwalten:
+            self.btn_nutzer_verwalten.clicked.connect(self.open_user_management)
 
         # Set DEBOUNCE Timer for every search field
         self.search_timer = QTimer(self)
@@ -1715,3 +1709,16 @@ class MainWindow(QMainWindow):
             os.startfile(pdf_path, 'open')
         except Exception as e:
             show_error(self, "Fehler beim Drucken", str(e))
+
+    def open_user_management(self):
+        # Rechteprüfung nur, wenn aktiviert
+        if IS_AUTHORIZATION_ACTIVE:
+            # Hier kannst du z.B. prüfen, ob der aktuelle User das Recht 'admin_panel' hat
+            # Simples Beispiel (ohne echten Nutzerkontext):
+            # from usermanager import user_has_permission
+            # if not user_has_permission(current_user_id, "admin_panel"):
+            #     QMessageBox.warning(self, "Nicht erlaubt", "Keine Berechtigung!")
+            #     return
+            pass  # Rechteprüfung kann hier später ergänzt werden
+        dialog = UserManagementDialog(self)
+        dialog.exec_()

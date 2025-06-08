@@ -77,6 +77,25 @@
          </spacer>
         </item>
         <item>
+         <widget class="QPushButton" name="btn_nutzer_verwalten">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Nutzerverwaltung</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
           <property name="minimumSize">
            <size>

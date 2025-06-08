@@ -1,45 +1,38 @@
 # IMPORT other Packages
-import io
 import mimetypes
-import os
 import sqlite3
 import traceback
 from datetime import date
 import sys
-from io import BytesIO
+from functools import partial
 
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
 import pyzipper
-from PyQt6.QtPdf import QPdfDocument
-from PyQt6.QtPdfWidgets import QPdfView
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import mm
-import win32api
-import win32print
 import os
-import win32print
-import aspose.pdf as ap
-import aspose.pydrawing as drawing
-from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 
 # IMPORT PyQt6 Packages
-from PyQt6.QtPrintSupport import QPrinter, QPrintPreviewDialog, QPrintDialog
 from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLabel, QComboBox, \
     QDoubleSpinBox, QPlainTextEdit, QTextBrowser, QTextEdit, QPushButton, QWidget, QDateEdit, \
     QDialog, QFormLayout, QFileDialog, QMessageBox, QVBoxLayout, QProgressDialog, QAbstractItemView
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QImage, QPainter
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
-from PIL import Image
+from PyQt6.QtPdf import QPdfDocument
+from PyQt6.QtPdfWidgets import QPdfView
+
+import config
+from auth.user_management import user_has_permission
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, APPLICATION_WORKING_PATH, EXPORT_OUTPUT_PATH
-from utils import show_error, format_exception, show_info
-from logic import get_ceos_for_service_provider_form, get_service_provider_ceos
+from validation import *
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, EXPORT_OUTPUT_PATH, \
+    IS_AUTHENTICATION_ACTIVE, IS_AUTHORIZATION_ACTIVE
+from auth.user_management_dialog import UserManagementDialog
+from utils import show_error, format_exception, show_info, has_right
+from logic import get_service_provider_ceos
+
 from pdfCreation import InvoicePDFBuilder
 
 class PasswordDialog(QDialog):
@@ -123,14 +116,18 @@ class PositionDialog(QDialog):
 
 # Class :QMainWindow: for the whole UI functionality
 class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, user_id=None, username=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_user_id = user_id
+        self.current_username = username
         try:
             # load UI file
             uic.loadUi(UI_PATH, self)
         except Exception as e:
             show_error(self, "UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
             sys.exit(1)
+        if username:
+            self.setWindowTitle(f"{self.windowTitle()} - angemeldet als {username}")
 
         # Mapping: QTableViews to database views
         self.table_mapping = {
@@ -289,6 +286,11 @@ class MainWindow(QMainWindow):
         if self.btn_close_form:
             self.btn_close_form.clicked.connect(self.pdf_view.show)
 
+        # Connect Signal for Click on 'btn_nutzer_verwalten'
+        self.btn_nutzer_verwalten = self.findChild(QPushButton, "btn_nutzer_verwalten")
+        if self.btn_nutzer_verwalten:
+            self.btn_nutzer_verwalten.clicked.connect(self.open_user_management)
+
         # Set DEBOUNCE Timer for every search field
         self.search_timer = QTimer(self)
         self.search_timer.setSingleShot(True)
@@ -336,6 +338,10 @@ class MainWindow(QMainWindow):
 
     # Loads data into a QTableView from a database view.
     def load_table(self, table_view: QTableView, db_view: str):
+        if not has_right(self, self.current_user_id, 'read'):
+            table_view.setModel(QStandardItemModel())
+            return
+
         try:
             data, columns = fetch_all(f"SELECT * FROM {db_view}")
         except Exception as e:
@@ -356,9 +362,6 @@ class MainWindow(QMainWindow):
                 for item in items:
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
-
-            table_view.setModel(model)
-
             # Alle Spalten: Breite automatisch an Inhalt und Header anpassen
             header = table_view.horizontalHeader()
             for col in range(header.count()):
@@ -371,9 +374,7 @@ class MainWindow(QMainWindow):
             table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
             table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
-            table_view.selectionModel().currentChanged.connect(
-                lambda current, previous: self.on_row_selected(current, db_view, table_view)
-            )
+            self.connect_row_selected_signal(table_view, db_view)
         except Exception as e:
             error_message = f"Error while populating table {db_view}: {format_exception(e)}"
             print(error_message)
@@ -421,7 +422,7 @@ class MainWindow(QMainWindow):
             show_error(self, "Form Reset Error", error_message)
 
     # Handles the event when a row is selected in a table view
-    def on_row_selected(self, current: QModelIndex, db_view: str, table_view: QTableView):
+    def on_row_selected(self, current: QModelIndex, previous: QModelIndex, db_view: str, table_view: QTableView):
         if not current.isValid():
             # Detailansicht leeren, wenn keine Auswahl
             if table_view.objectName() == "tv_positionen" and self.tv_detail_positionen:
@@ -574,43 +575,86 @@ class MainWindow(QMainWindow):
 
     # Saves and commits the data from form current form into DB
     def on_save_entry(self):
+        if not has_right(self, self.current_user_id, 'write'):
+            return
+
         current_tab = self.tabWidget.currentWidget().objectName()
         main_fields = self.tab_field_mapping.get(current_tab, [])
         rels = self.relationships.get(current_tab, {})
 
-        # Validierung Hauptfelder
-        valid, main_data, error = self.validate_and_collect_fields(main_fields)
-        if not valid:
-            show_error(self, "Validierungsfehler", error)
-            return
-
-        # Validierung Relationen
         rel_data = {}
-        for rel, rel_info in rels.items():
-            fields = rel_info["fields"]
-            valid, sub_data, error = self.validate_and_collect_fields(fields)
-            if not valid:
-                show_error(self, "Validierungsfehler", error)
-                return
-            rel_data[rel] = sub_data
-
-        def parse_float(val):
-            print("parse_float called with:", repr(val), type(val))
-            if val is None:
-                return 0.0
-            if isinstance(val, (float, int)):
-                return float(val)
-            if isinstance(val, str):
-                val = val.strip().replace(",", ".")
-                if val == "":
-                    return 0.0
-                try:
-                    return float(val)
-                except Exception:
-                    return 0.0
-            return 0.0
-
         try:
+            if getattr(config, "IS_VALIDATION_ACTIVE", False):
+                # Validierung Hauptfelder
+                valid, main_data, error = self.validate_and_collect_fields(main_fields, current_tab)
+                if not valid:
+                    show_error(self, "Validierungsfehler", error)
+                    return
+
+                # Validierung Relationen
+                for rel, rel_info in rels.items():
+                    fields = rel_info["fields"]
+                    valid, sub_data, error = self.validate_and_collect_fields(fields, current_tab)
+                    if not valid:
+                        show_error(self, "Validierungsfehler", error)
+                        return
+                    rel_data[rel] = sub_data
+            else:
+                # Felder einfach einsammeln (ohne Prüfung)
+                main_data = {}
+                for field_name in main_fields:
+                    widget = self.findChild(QWidget, field_name)
+                    if widget is None:
+                        continue
+                    value = None
+                    if isinstance(widget, QLineEdit):
+                        value = widget.text().strip()
+                    elif isinstance(widget, QComboBox):
+                        value = widget.currentText().strip()
+                    elif isinstance(widget, QDoubleSpinBox):
+                        value = widget.value()
+                    elif isinstance(widget, QTextEdit):
+                        value = widget.toPlainText()
+                    elif isinstance(widget, QDateEdit):
+                        value = widget.date().toString("dd.MM.yyyy")
+                    main_data[field_name] = value
+
+                for rel, rel_info in rels.items():
+                    fields = rel_info["fields"]
+                    sub_data = {}
+                    for field_name in fields:
+                        widget = self.findChild(QWidget, field_name)
+                        if widget is None:
+                            continue
+                        value = None
+                        if isinstance(widget, QLineEdit):
+                            value = widget.text().strip()
+                        elif isinstance(widget, QComboBox):
+                            value = widget.currentText().strip()
+                        elif isinstance(widget, QDoubleSpinBox):
+                            value = widget.value()
+                        elif isinstance(widget, QTextEdit):
+                            value = widget.toPlainText()
+                        elif isinstance(widget, QDateEdit):
+                            value = widget.date().toString("dd.MM.yyyy")
+                        sub_data[field_name] = value
+                    rel_data[rel] = sub_data
+
+            def parse_float(val):
+                if val is None:
+                    return 0.0
+                if isinstance(val, (float, int)):
+                    return float(val)
+                if isinstance(val, str):
+                    val = val.strip().replace(",", ".")
+                    if val == "":
+                        return 0.0
+                    try:
+                        return float(val)
+                    except Exception:
+                        return 0.0
+                return 0.0
+
             with sqlite3.connect(DB_PATH) as conn:
                 cur = conn.cursor()
 
@@ -631,10 +675,10 @@ class MainWindow(QMainWindow):
                     cur.execute(
                         "INSERT INTO INVOICES (INVOICE_NR, CREATION_DATE, FK_CUSTID, FK_UST_IDNR, LABOR_COST, VAT_RATE_LABOR, VAT_RATE_POSITIONS) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (
-                            main_data["tb_rechnungsnummer"],
-                            main_data["de_erstellungsdatum"],
-                            main_data["FK_CUSTID"],
-                            main_data["FK_UST_IDNR"],
+                            main_data.get("tb_rechnungsnummer", ""),
+                            main_data.get("de_erstellungsdatum", ""),
+                            main_data.get("FK_CUSTID", ""),
+                            main_data.get("FK_UST_IDNR", ""),
                             parse_float(main_data.get("dsb_lohnkosten")),
                             parse_float(main_data.get("dsb_mwst_lohnkosten")),
                             parse_float(main_data.get("dsb_mwst_positionen")),
@@ -659,7 +703,7 @@ class MainWindow(QMainWindow):
                             cur.execute(
                                 "INSERT INTO POSITIONS (CREATION_DATE, DESCRIPTION, AREA, UNIT_PRICE, NAME) VALUES (?, ?, ?, ?, ?)",
                                 (
-                                    main_data["de_erstellungsdatum"],
+                                    main_data.get("de_erstellungsdatum", ""),
                                     pos.get("DESCRIPTION", ""),
                                     area,
                                     unit_price,
@@ -670,30 +714,26 @@ class MainWindow(QMainWindow):
                             # Verknüpfung mit Rechnung speichern
                             cur.execute(
                                 "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                                (new_pos_id, main_data["tb_rechnungsnummer"])
+                                (new_pos_id, main_data.get("tb_rechnungsnummer", ""))
                             )
                         else:
                             # Bestehende Position: nur Verknüpfung speichern
                             try:
                                 cur.execute(
                                     "INSERT INTO REF_INVOICES_POSITIONS (FK_POSITIONS_POS_ID, FK_INVOICES_INVOICE_NR) VALUES (?, ?)",
-                                    (int(pos_id), main_data["tb_rechnungsnummer"])
+                                    (int(pos_id), main_data.get("tb_rechnungsnummer", ""))
                                 )
                             except Exception as e:
                                 print("FEHLER bei existierender Position:", pos_id, e)
                                 continue
 
-                    # Commits current Session into DB
+                    # Commit
                     conn.commit()
-                    # Nach Speichern: temporäre Positionen leeren, GUI aktualisieren
                     self.temp_positionen = []
                     self.load_all_and_temp_positions_for_rechnungsformular()
-                    self.create_and_show_invoice_pdf(main_data["tb_rechnungsnummer"])
+                    self.create_and_show_invoice_pdf(main_data.get("tb_rechnungsnummer", ""))
 
-
-                #--------------KUNDEN-------------------
                 elif current_tab == "tab_kunden":
-                    # INSERT collected data into ADDRESSES
                     address_id = None
                     if "address" in rel_data:
                         addr = rel_data["address"]
@@ -710,25 +750,21 @@ class MainWindow(QMainWindow):
                         )
                         address_id = cur.lastrowid
 
-                    # INSERT collected data into CUSTOMERS
                     cur.execute(
                         "INSERT INTO CUSTOMERS (CUSTID, FIRST_NAME, LAST_NAME, GENDER,CREATION_DATE, FK_ADDRESS_ID) VALUES (?, ?, ?, ?, ?, ?)",
                         (
-                            main_data["tv_kunden_Kundennummer"],
-                            main_data["tv_kunden_Vorname"],
-                            main_data["tv_kunden_Nachname"],
-                            main_data["tv_kunden_Geschlecht"],
+                            main_data.get("tv_kunden_Kundennummer", ""),
+                            main_data.get("tv_kunden_Vorname", ""),
+                            main_data.get("tv_kunden_Nachname", ""),
+                            main_data.get("tv_kunden_Geschlecht", ""),
                             date.today().strftime("%d.%m.%Y"),
                             address_id
                         )
                     )
 
-
-                # --------------DIENSTLEISTER-------------------
                 elif current_tab == "tab_dienstleister":
                     address_data = rel_data.get("addresses", {})
 
-                    # Adresse einfügen
                     cur.execute(
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
                         (
@@ -742,12 +778,12 @@ class MainWindow(QMainWindow):
                     )
                     address_id = cur.lastrowid
 
-                    # Logo speichern
                     logo_id = None
-                    if (self.file_name and self.logo_data and len(self.logo_data) > 0):
+                    if (getattr(self, "file_name", None) and getattr(self, "logo_data", None) and len(
+                            self.logo_data) > 0):
                         logo_file_name = self.file_name
                         logo_data = self.logo_data
-                        file_type = self.mime_type or ""
+                        file_type = getattr(self, "mime_type", "") or ""
                         cur.execute(
                             "INSERT INTO LOGOS (FILE_NAME, LOGO_BINARY, MIME_TYPE, CREATION_DATE) VALUES (?, ?, ?, ?)",
                             (
@@ -758,27 +794,23 @@ class MainWindow(QMainWindow):
                             )
                         )
                         logo_id = cur.lastrowid
-                    else:
-                        show_error(self, "Fehler", "Fehler beim Speichern des Logos")
 
-                    # Dienstleister speichern
                     cur.execute(
                         "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
-                            main_data["tv_dienstleister_UStIdNr"],
+                            main_data.get("tv_dienstleister_UStIdNr", ""),
                             main_data.get("tv_dienstleister_Mobiltelefonnummer", ""),
-                            main_data["tv_dienstleister_Unternehmensname"],
+                            main_data.get("tv_dienstleister_Unternehmensname", ""),
                             main_data.get("tv_dienstleister_Faxnummer", ""),
-                            main_data["tv_dienstleister_Webseite"],
-                            main_data["tv_dienstleister_Email"],
-                            main_data["tv_dienstleister_Telefonnummer"],
+                            main_data.get("tv_dienstleister_Webseite", ""),
+                            main_data.get("tv_dienstleister_Email", ""),
+                            main_data.get("tv_dienstleister_Telefonnummer", ""),
                             date.today().strftime("%d.%m.%Y"),
                             address_id,
                             logo_id
                         )
                     )
 
-                    # Bank speichern
                     bank_data = rel_data.get("accounts", {})
                     bic = bank_data.get("tv_dienstleister_BIC", "")
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
@@ -790,10 +822,9 @@ class MainWindow(QMainWindow):
                     if iban and bic:
                         cur.execute(
                             "INSERT INTO ACCOUNT (IBAN, FK_BANK_ID, FK_UST_IDNR) VALUES (?, ?, ?)",
-                            (iban, bic, main_data["tv_dienstleister_UStIdNr"])
+                            (iban, bic, main_data.get("tv_dienstleister_UStIdNr", ""))
                         )
 
-                    # CEOs erfassen und validieren
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
 
@@ -804,11 +835,10 @@ class MainWindow(QMainWindow):
                             return
                         ceo_stnr_map = ceo_dlg.get_ceo_st_numbers()
                         conflict = False
-                        ceo_inserts = []  # neue CEOs für späteren INSERT
-                        ref_inserts = []  # neue Zuordnungen für späteren INSERT
-                        used_steuernrs = set()  # für Doppelteingaben im Dialog
+                        ceo_inserts = []
+                        ref_inserts = []
+                        used_steuernrs = set()
 
-                        # === Validierungsschleife ===
                         for ceo_name, st_nr in ceo_stnr_map.items():
                             if not ceo_name or not st_nr:
                                 show_error(self, "Fehler", "Alle Felder müssen ausgefüllt werden!")
@@ -839,15 +869,13 @@ class MainWindow(QMainWindow):
                                     )
                                     conflict = True
                                     break
-                            # Verknüpfung prüfen
                             try:
                                 cur.execute(
                                     "SELECT COUNT(*) FROM REF_LABOR_COST WHERE FK_ST_NR=? AND FK_UST_IDNR=?",
-                                    (st_nr, main_data["tv_dienstleister_UStIdNr"])
+                                    (st_nr, main_data.get("tv_dienstleister_UStIdNr", ""))
                                 )
                                 if cur.fetchone()[0] == 0:
-                                    ref_inserts.append((st_nr, main_data["tv_dienstleister_UStIdNr"]))
-                                # sonst: Verknüpfung existiert schon – kein Fehler, kein doppelter Eintrag
+                                    ref_inserts.append((st_nr, main_data.get("tv_dienstleister_UStIdNr", "")))
                             except Exception as e:
                                 show_error(self, "Fehler beim Datenbankzugriff",
                                            f"Fehler bei Prüfung der Zuordnung für Steuernummer {st_nr}: {e}")
@@ -855,10 +883,8 @@ class MainWindow(QMainWindow):
                                 break
 
                         if conflict:
-                            # Feedback wurde schon gegeben, Dialog erscheint erneut
                             continue
 
-                        # === Alle Validierungen erfolgreich: Jetzt erst INSERTS ===
                         try:
                             for st_nr, ceo_name in ceo_inserts:
                                 cur.execute("INSERT INTO CEO (ST_NR, CEO_NAME) VALUES (?, ?)", (st_nr, ceo_name))
@@ -872,43 +898,36 @@ class MainWindow(QMainWindow):
                                        f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
                             return
 
-                        # Erfolgreich, verlasse die Schleife
                         break
 
-                # --------------POSITIONEN-------------------
                 elif current_tab == "tab_positionen":
-                    # INSERT collected data into POSITIONS
                     cur.execute(
                         "INSERT INTO POSITIONS (NAME, DESCRIPTION, AREA, UNIT_PRICE, CREATION_DATE) VALUES (?, ?, ?, ?, ?)",
                         (
-                            main_data["tv_positionen_Bezeichnung"],
-                            main_data["tv_positionen_Beschreibung"],
-                            main_data["tv_positionen_Flaeche"],
-                            main_data["tv_positionen_Einzelpreis"],
+                            main_data.get("tv_positionen_Bezeichnung", ""),
+                            main_data.get("tv_positionen_Beschreibung", ""),
+                            main_data.get("tv_positionen_Flaeche", 0.0),
+                            main_data.get("tv_positionen_Einzelpreis", 0.0),
                             date.today().strftime("%d.%m.%Y")
                         )
                     )
                     pos_id = cur.lastrowid
 
-                # Commits current Session into DB
                 conn.commit()
-                # Reloads all QTableViews
                 self.refresh_tab_table_views()
-                # Clear QTableViews in
-                self.load_all_and_temp_positions_for_rechnungsformular()
 
+                self.load_all_and_temp_positions_for_rechnungsformular()
             show_info(self, "Erfolg", "Eintrag erfolgreich gespeichert.")
-            # Nach dem Speichern ggf. Felder leeren & Tabellen neu laden
             self.clear_and_enable_form_fields()
             self.init_tables()
-
-
         except Exception as e:
+            import traceback
             print(traceback.format_exc())
             show_error(self, "Speicherfehler", str(e))
 
     # Validates collected data before commiting into DB
-    def validate_and_collect_fields(self, field_names):
+    def validate_and_collect_fields(self, field_names, current_tab):
+        errors = []
         data_map = {}
         for field_name in field_names:
             widget = self.findChild(QWidget, field_name)
@@ -925,13 +944,115 @@ class MainWindow(QMainWindow):
                 value = widget.toPlainText()
             elif isinstance(widget, QDateEdit):
                 value = widget.date().toString("dd.MM.yyyy")
-            if value is None or (isinstance(value, str) and not value):
-                label = self.findChild(QLabel,
-                                       f"lbl_{field_name.replace('tv_', '').replace('tb_', '').replace('_input', '')}")
-                field_label = label.text() if label else field_name
-                return False, {}, f"Das Feld '{field_label}' darf nicht leer sein."
-            data_map[field_name] = value
-        return True, data_map, ""
+
+            # --- KUNDEN ---
+            if current_tab == "tab_kunden":
+                if field_name == "tv_kunden_Kundennummer":
+                    if value and not validate_kundennummer(value):
+                        errors.append("Kundennummer muss zwischen 00001 und 99999 liegen.")
+                elif field_name == "tv_kunden_Hausnummer":
+                    if not value or not validate_hausnummer(value):
+                        errors.append("Hausnummer darf maximal 4 Zeichen lang sein.")
+                elif field_name == "tv_kunden_PLZ":
+                    if not value or not validate_plz(value):
+                        errors.append("PLZ muss 1 bis 7 Zeichen lang sein.")
+                elif field_name in ["tv_kunden_Strasse", "tv_kunden_Stadt", "tv_kunden_Land"]:
+                    if not value:
+                        errors.append(f"{field_name.replace('tv_kunden_', '')} darf nicht leer sein.")
+                elif field_name == "tv_kunden_Geschlecht":
+                    # optional, kein Fehler
+                    pass
+                else:
+                    # alle anderen Felder außer Geschlecht und Kundennummer müssen ausgefüllt sein
+                    if not value:
+                        errors.append(f"{field_name.replace('tv_kunden_', '')} darf nicht leer sein.")
+                data_map[field_name] = value
+
+            # --- DIENSTLEISTER ---
+            elif current_tab == "tab_dienstleister":
+                if field_name == "tv_dienstleister_UStIdNr":
+                    if not value or not validate_ustidnr(value):
+                        errors.append("USt-IdNr. darf maximal 11 Zeichen lang sein.")
+                elif field_name == "tv_dienstleister_Hausnummer":
+                    if not value or not validate_hausnummer(value):
+                        errors.append("Hausnummer darf maximal 4 Zeichen lang sein.")
+                elif field_name == "tv_dienstleister_PLZ":
+                    if not value or not validate_plz(value):
+                        errors.append("PLZ muss 1 bis 7 Zeichen lang sein.")
+                elif field_name == "tv_dienstleister_Email":
+                    if value and not validate_email(value):
+                        errors.append("Ungültige E-Mail-Adresse.")
+                elif field_name == "tv_dienstleister_Telefonnummer":
+                    # Telefonnummer oder Mobiltelefonnummer muss ausgefüllt sein, Prüfung später
+                    pass
+                elif field_name == "tv_dienstleister_Mobiltelefonnummer":
+                    pass
+                elif field_name == "tv_dienstleister_BIC":
+                    if value and not validate_bic(value):
+                        errors.append("BIC darf maximal 12 Zeichen lang sein.")
+                elif field_name == "tv_dienstleister_IBAN":
+                    if value and not validate_iban(value):
+                        errors.append("IBAN darf maximal 22 Zeichen lang sein.")
+                elif field_name in ["tv_dienstleister_Strasse", "tv_dienstleister_Stadt", "tv_dienstleister_Land",
+                                    "tv_dienstleister_Unternehmensname"]:
+                    if not value:
+                        errors.append(f"{field_name.replace('tv_dienstleister_', '')} darf nicht leer sein.")
+                # Faxnummer, Website, Logo: optional, kein Fehler
+                else:
+                    if not value and field_name not in ["tv_dienstleister_Faxnummer", "tv_dienstleister_Webseite",
+                                                        "tv_dienstleister_Logo"]:
+                        errors.append(f"{field_name.replace('tv_dienstleister_', '')} darf nicht leer sein.")
+                data_map[field_name] = value
+
+            # --- POSITIONEN ---
+            elif current_tab == "tab_positionen":
+                if field_name == "tv_positionen_PositionsID":
+                    if not value or not validate_positionsnummer(value):
+                        errors.append("Positionsnummer muss eine fortlaufende Zahl ab 0 sein.")
+                elif field_name == "tv_positionen_Beschreibung":
+                    if value and not validate_beschreibung(value):
+                        errors.append("Beschreibung darf maximal 1000 Zeichen lang sein.")
+                elif field_name in ["tv_positionen_Bezeichnung", "tv_positionen_Einzelpreis", "tv_positionen_Flaeche"]:
+                    if not value:
+                        errors.append(f"{field_name.replace('tv_positionen_', '')} darf nicht leer sein.")
+                data_map[field_name] = value
+
+            # --- RECHNUNG ---
+            elif current_tab == "tab_rechnungen":
+                if field_name == "tb_rechnungsnummer":
+                    if not value or not validate_kundennummer(value):
+                        errors.append("Rechnungsnummer muss zwischen 00001 und 99999 liegen.")
+                elif field_name == "de_erstellungsdatum":
+                    if not value:
+                        errors.append("Erstellungsdatum muss gesetzt sein.")
+                elif field_name in ["dsb_mwst_lohnkosten", "dsb_mwst_positionen"]:
+                    if value and not validate_mwst(value):
+                        errors.append("MwSt. muss zwischen 0 und 100 liegen.")
+                elif field_name == "dsb_lohnkosten":
+                    # muss nur ausgefüllt sein, wenn >0
+                    try:
+                        if value and float(value) > 0 and not value:
+                            errors.append("Lohnkosten müssen ausgefüllt werden, wenn sie größer als 0 sind.")
+                    except:
+                        errors.append("Lohnkosten müssen eine Zahl sein.")
+                else:
+                    if not value:
+                        errors.append(f"{field_name} darf nicht leer sein.")
+                data_map[field_name] = value
+            else:
+                # Default: nur Pflichtfeldprüfung
+                if not value:
+                    errors.append(f"{field_name} darf nicht leer sein.")
+                data_map[field_name] = value
+
+        # Spezialregel: Telefonnummer/Mobiltelefonnummer bei Dienstleister
+        if current_tab == "tab_dienstleister":
+            tel = data_map.get("tv_dienstleister_Telefonnummer", "")
+            mobil = data_map.get("tv_dienstleister_Mobiltelefonnummer", "")
+            if not tel and not mobil:
+                errors.append("Mindestens eine Telefonnummer oder Mobiltelefonnummer muss ausgefüllt werden.")
+
+        return (len(errors) == 0), data_map, "\n".join(errors)
 
     # Initializes QTableViews in Rechnungen Form
     def init_tv_rechnungen_form_tabellen(self):
@@ -1047,6 +1168,8 @@ class MainWindow(QMainWindow):
         - Rechnungen: Entfernt selektierte Positionen aus der m:n-Tabelle REF_INVOICES_POSITIONS. Ist keine Position mehr übrig und es ist nichts selektiert, wird die Rechnung gelöscht.
         - Aktualisiert immer die Detailansicht nach der Löschaktion.
         """
+        if not has_right(self, self.current_user_id, 'delete'):
+            return
         current_tab = self.tabWidget.currentWidget().objectName()
         try:
             with sqlite3.connect(DB_PATH) as conn:
@@ -1294,6 +1417,7 @@ class MainWindow(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     model.appendRow(items)
                 table_view.setModel(model)
+                self.connect_row_selected_signal(table_view, db_view_name)
                 table_view.resizeColumnsToContents()
                 table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
                 table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -1451,6 +1575,7 @@ class MainWindow(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
             table_view.setModel(model)
+            self.connect_row_selected_signal(table_view, db_view_name)
             table_view.resizeColumnsToContents()
             table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
             table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -1690,12 +1815,23 @@ class MainWindow(QMainWindow):
             positions_rows = cur.fetchall()
             positions_columns = [desc[0] for desc in cur.description]
 
+            # Bankverbindung(en) zum Dienstleister
+            cur.execute("""
+                SELECT acc.IBAN, acc.FK_BANK_ID AS BIC, b.BANK_NAME
+                FROM ACCOUNT acc
+                JOIN BANK b ON acc.FK_BANK_ID = b.BIC
+                WHERE acc.FK_UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+            """, (invoice_nr,))
+            accounts_rows = cur.fetchall()
+            accounts_columns = [desc[0] for desc in cur.description]
+
         export_data = [
             {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
             {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
             {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
             {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
-            {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
+            {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]},
+            {"accounts": [dict(zip(accounts_columns, row)) for row in accounts_rows]}
         ]
         return export_data
 
@@ -1715,3 +1851,22 @@ class MainWindow(QMainWindow):
             os.startfile(pdf_path, 'open')
         except Exception as e:
             show_error(self, "Fehler beim Drucken", str(e))
+
+    def open_user_management(self):
+        # Rechteprüfung nur, wenn aktiviert
+        if IS_AUTHORIZATION_ACTIVE:
+            if not has_right(self, self.current_user_id, 'admin'):
+                return
+        dialog = UserManagementDialog(self)
+        dialog.exec()
+
+    def connect_row_selected_signal(self, table_view, db_view):
+        sel_model = table_view.selectionModel()
+        if sel_model is None:
+            print("[DEBUG] Kein selectionModel nach setModel!")
+            return
+        try:
+            sel_model.currentChanged.disconnect()
+        except Exception:
+            pass
+        sel_model.currentChanged.connect(partial(self.on_row_selected, db_view=db_view, table_view=table_view))

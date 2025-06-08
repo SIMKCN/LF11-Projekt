@@ -9,8 +9,6 @@ from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
 import pyzipper
-from PyQt6.QtPdf import QPdfDocument
-from PyQt6.QtPdfWidgets import QPdfView
 import os
 
 # IMPORT PyQt6 Packages
@@ -20,6 +18,8 @@ from PyQt6.QtWidgets import QMainWindow, QTableView, QHeaderView, QLineEdit, QLa
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QPixmap
 from PyQt6.QtCore import QModelIndex, Qt, QTimer
 from PyQt6 import uic
+from PyQt6.QtPdf import QPdfDocument
+from PyQt6.QtPdfWidgets import QPdfView
 
 import config
 # IMPORT Functions from local scripts
@@ -1721,4 +1721,4 @@ class MainWindow(QMainWindow):
             #     return
             pass  # Rechteprüfung kann hier später ergänzt werden
         dialog = UserManagementDialog(self)
-        dialog.exec_()
+        dialog.exec()

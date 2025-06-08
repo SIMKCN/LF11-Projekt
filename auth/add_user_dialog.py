@@ -1,10 +1,10 @@
-from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt6 import uic
+from PyQt6.QtWidgets import QDialog, QMessageBox
 
 from auth.user_management import get_all_permissions, update_user, add_user
 
 
-class AddEditUserDialog(QDialog):
+class AddUserDialog(QDialog):
     def __init__(self, parent=None, user=None):
         super().__init__(parent)
         uic.loadUi("Qt/add_user_dialog.ui", self)

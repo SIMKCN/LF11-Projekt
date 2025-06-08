@@ -4,6 +4,7 @@ import sqlite3
 import traceback
 from datetime import date
 import sys
+from functools import partial
 
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -347,7 +348,6 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Database Error", error_message)
             table_view.setModel(QStandardItemModel())
-            self.connect_row_selected_signal(table_view, db_view)
             return
 
         try:
@@ -361,9 +361,6 @@ class MainWindow(QMainWindow):
                 for item in items:
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
-
-            table_view.setModel(model)
-
             # Alle Spalten: Breite automatisch an Inhalt und Header anpassen
             header = table_view.horizontalHeader()
             for col in range(header.count()):
@@ -376,9 +373,7 @@ class MainWindow(QMainWindow):
             table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
             table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
 
-            table_view.selectionModel().currentChanged.connect(
-                lambda current, previous: self.on_row_selected(current, db_view, table_view)
-            )
+            self.connect_row_selected_signal(table_view, db_view)
         except Exception as e:
             error_message = f"Error while populating table {db_view}: {format_exception(e)}"
             print(error_message)
@@ -426,7 +421,7 @@ class MainWindow(QMainWindow):
             show_error(self, "Form Reset Error", error_message)
 
     # Handles the event when a row is selected in a table view
-    def on_row_selected(self, current: QModelIndex, db_view: str, table_view: QTableView):
+    def on_row_selected(self, current: QModelIndex, previous: QModelIndex, db_view: str, table_view: QTableView):
         if not current.isValid():
             # Detailansicht leeren, wenn keine Auswahl
             if table_view.objectName() == "tv_positionen" and self.tv_detail_positionen:
@@ -919,6 +914,7 @@ class MainWindow(QMainWindow):
 
                 conn.commit()
                 self.refresh_tab_table_views()
+
                 self.load_all_and_temp_positions_for_rechnungsformular()
             show_info(self, "Erfolg", "Eintrag erfolgreich gespeichert.")
             self.clear_and_enable_form_fields()
@@ -1420,6 +1416,7 @@ class MainWindow(QMainWindow):
                         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     model.appendRow(items)
                 table_view.setModel(model)
+                self.connect_row_selected_signal(table_view, db_view_name)
                 table_view.resizeColumnsToContents()
                 table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
                 table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -1857,11 +1854,12 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def connect_row_selected_signal(self, table_view, db_view):
-        # Disconnect previous connections
+        sel_model = table_view.selectionModel()
+        if sel_model is None:
+            print("[DEBUG] Kein selectionModel nach setModel!")
+            return
         try:
-            table_view.selectionModel().currentChanged.disconnect()
+            sel_model.currentChanged.disconnect()
         except Exception:
             pass
-        table_view.selectionModel().currentChanged.connect(
-            lambda current, previous: self.on_row_selected(current, db_view, table_view)
-        )
+        sel_model.currentChanged.connect(partial(self.on_row_selected, db_view=db_view, table_view=table_view))

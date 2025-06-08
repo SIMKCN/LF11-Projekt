@@ -88,3 +88,12 @@ def check_user_credentials(username, password):
     if row:
         return bcrypt.checkpw(password.encode(), row[0].encode())
     return False
+
+def get_user_id_by_username(username):
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE username = ?", (username,))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        return None

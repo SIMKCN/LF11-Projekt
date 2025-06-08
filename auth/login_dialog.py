@@ -13,7 +13,6 @@ class LoginDialog(QDialog):
 
         self.btn_login = QPushButton("Login")
         self.btn_login.clicked.connect(self.try_login)
-        #self.edit_pass.returnPressed.connect(self.try_login)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label_user)
@@ -25,6 +24,7 @@ class LoginDialog(QDialog):
 
         self.success = False
         self._login_in_progress = False  # Verhindert mehrfaches Auslösen
+        self._user_id = None
 
     def try_login(self):
         if self._login_in_progress:
@@ -33,12 +33,16 @@ class LoginDialog(QDialog):
 
         username = self.edit_user.text().strip()
         password = self.edit_pass.text()
-        from auth.user_management import check_user_credentials
+        from auth.user_management import check_user_credentials, get_user_id_by_username
         if check_user_credentials(username, password):
             self.success = True
+            self._user_id = get_user_id_by_username(username)  # Hole user_id aus der DB
             self.accept()
         else:
             QMessageBox.warning(self, "Fehler", "Benutzername oder Passwort falsch!")
             self.edit_pass.clear()
             self.edit_pass.setFocus()
         self._login_in_progress = False
+
+    def get_user_id(self):
+        return self._user_id

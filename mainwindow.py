@@ -28,7 +28,7 @@ from validation import *
 from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, EXPORT_OUTPUT_PATH, \
     IS_AUTHENTICATION_ACTIVE, IS_AUTHORIZATION_ACTIVE
 from auth.user_management_dialog import UserManagementDialog
-from utils import show_error, format_exception, show_info
+from utils import show_error, format_exception, show_info, has_right
 from logic import get_service_provider_ceos
 
 from pdfCreation import InvoicePDFBuilder
@@ -114,8 +114,10 @@ class PositionDialog(QDialog):
 
 # Class :QMainWindow: for the whole UI functionality
 class MainWindow(QMainWindow):
-    def __init__(self, username):
-        super().__init__()
+    def __init__(self, user_id=None, username=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_user_id = user_id
+        self.current_username = username
         try:
             # load UI file
             uic.loadUi(UI_PATH, self)
@@ -334,6 +336,10 @@ class MainWindow(QMainWindow):
 
     # Loads data into a QTableView from a database view.
     def load_table(self, table_view: QTableView, db_view: str):
+        if not has_right(self, self.current_user_id, 'read'):
+            table_view.setModel(QStandardItemModel())
+            return
+
         try:
             data, columns = fetch_all(f"SELECT * FROM {db_view}")
         except Exception as e:
@@ -341,6 +347,7 @@ class MainWindow(QMainWindow):
             print(error_message)
             show_error(self, "Database Error", error_message)
             table_view.setModel(QStandardItemModel())
+            self.connect_row_selected_signal(table_view, db_view)
             return
 
         try:
@@ -572,7 +579,8 @@ class MainWindow(QMainWindow):
 
     # Saves and commits the data from form current form into DB
     def on_save_entry(self):
-        import config
+        if not has_right(self, self.current_user_id, 'write'):
+            return
 
         current_tab = self.tabWidget.currentWidget().objectName()
         main_fields = self.tab_field_mapping.get(current_tab, [])
@@ -1163,6 +1171,8 @@ class MainWindow(QMainWindow):
         - Rechnungen: Entfernt selektierte Positionen aus der m:n-Tabelle REF_INVOICES_POSITIONS. Ist keine Position mehr übrig und es ist nichts selektiert, wird die Rechnung gelöscht.
         - Aktualisiert immer die Detailansicht nach der Löschaktion.
         """
+        if not has_right(self, self.current_user_id, 'delete'):
+            return
         current_tab = self.tabWidget.currentWidget().objectName()
         try:
             with sqlite3.connect(DB_PATH) as conn:
@@ -1567,6 +1577,7 @@ class MainWindow(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 model.appendRow(items)
             table_view.setModel(model)
+            self.connect_row_selected_signal(table_view, db_view_name)
             table_view.resizeColumnsToContents()
             table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
             table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -1844,3 +1855,13 @@ class MainWindow(QMainWindow):
             pass  # Rechteprüfung kann hier später ergänzt werden
         dialog = UserManagementDialog(self)
         dialog.exec()
+
+    def connect_row_selected_signal(self, table_view, db_view):
+        # Disconnect previous connections
+        try:
+            table_view.selectionModel().currentChanged.disconnect()
+        except Exception:
+            pass
+        table_view.selectionModel().currentChanged.connect(
+            lambda current, previous: self.on_row_selected(current, db_view, table_view)
+        )

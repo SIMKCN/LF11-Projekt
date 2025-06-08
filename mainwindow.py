@@ -11,7 +11,6 @@ from io import BytesIO
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
-import aspose
 import pyzipper
 from PyQt6.QtPdf import QPdfDocument
 from PyQt6.QtPdfWidgets import QPdfView
@@ -41,6 +40,7 @@ from database import get_next_primary_key, fetch_all
 from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, APPLICATION_WORKING_PATH, EXPORT_OUTPUT_PATH
 from utils import show_error, format_exception, show_info
 from logic import get_ceos_for_service_provider_form, get_service_provider_ceos
+from pdfCreation import InvoicePDFBuilder
 
 class PasswordDialog(QDialog):
     def __init__(self, min_length=4, parent=None):
@@ -1355,7 +1355,8 @@ class MainWindow(QMainWindow):
             with open(EXPORT_OUTPUT_PATH + r"\rechnung.xml", "w", encoding="utf-8") as f:
                 f.write(xml_string)
 
-            self.create_invoice_pdf(xml_string, logo_bytes, EXPORT_OUTPUT_PATH + r"\rechnung.pdf")
+            builder = InvoicePDFBuilder(xml_string, logo_bytes)
+            builder.build(EXPORT_OUTPUT_PATH + r"\rechnung.pdf")
 
             dialog = PasswordDialog(min_length=4)
             if dialog.exec():
@@ -1561,196 +1562,6 @@ class MainWindow(QMainWindow):
 
         return xml_string
 
-    def create_invoice_pdf(self, build_xml_string: str, build_logo_binary: bytes, output_path: str):
-        root = ET.fromstring(build_xml_string)
-
-        def extract_text(element, tag):
-            child = element.find(tag)
-            return child.text.strip() if child is not None and child.text else ""
-
-        invoice = root.find("invoice")
-        customer = root.find("customer")
-        provider = root.find("service_provider")
-        ceo = root.find("ceos/ceo")
-        positions = root.find("positions").findall("position")
-        bank = root.find("bank")
-
-        invoice_nr = extract_text(invoice, "INVOICE_NR")
-        creation_date = extract_text(invoice, "CREATION_DATE")
-        cust_id = extract_text(invoice, "FK_CUSTID")
-        ust_id = extract_text(invoice, "FK_UST_IDNR")
-        labor_cost = float(extract_text(invoice, "LABOR_COST") or 0)
-        vat_rate_labor = float(extract_text(invoice, "VAT_RATE_LABOR") or 19)
-        vat_rate_positions = float(extract_text(invoice, "VAT_RATE_POSITIONS") or 19)
-
-        full_name = f"{extract_text(customer, 'FIRST_NAME')} {extract_text(customer, 'LAST_NAME')}"
-        address_line1 = f"{extract_text(customer, 'STREET')} {extract_text(customer, 'NUMBER')}"
-        address_line2 = f"{extract_text(customer, 'ZIP')} {extract_text(customer, 'CITY')}"
-
-        c = canvas.Canvas(output_path, pagesize=A4)
-        width, height = A4
-        margin = 20 * mm
-        line_height = 5 * mm
-        y = height - margin
-
-        def draw_text(x, y, text, size=10, bold=False):
-            font = "Helvetica-Bold" if bold else "Helvetica"
-            c.setFont(font, size)
-            c.drawString(x, y, text)
-
-        def draw_right(x, y, text, size=10, bold=False):
-            font = "Helvetica-Bold" if bold else "Helvetica"
-            c.setFont(font, size)
-            c.drawRightString(x, y, text)
-
-        def draw_logo():
-            if build_logo_binary:
-                try:
-                    logo = ImageReader(BytesIO(build_logo_binary))
-                    c.drawImage(logo, width - margin - 40 * mm, y - 10 * mm, width=40 * mm, preserveAspectRatio=True)
-                except:
-                    pass
-
-        draw_logo()
-        draw_text(margin, y,
-                  f"{extract_text(provider, 'PROVIDER_NAME')}   •   {extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}   •   {extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
-        y -= 15 * mm
-
-        draw_text(margin, y, full_name)
-        y -= line_height
-        draw_text(margin, y, address_line1)
-        y -= line_height
-        draw_text(margin, y, address_line2)
-        y -= 10 * mm
-
-        draw_text(margin, y, extract_text(provider, "PROVIDER_NAME"))
-        y -= line_height
-        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
-        y -= line_height
-        draw_text(margin, y, f"{extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}")
-        y -= line_height
-        draw_text(margin, y, f"{extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
-        y -= 8 * mm
-
-        for label, field in [
-            ("Mobil", "MOBILTELNR"),
-            ("Tel.", "TELNR"),
-            ("Fax", "FAXNR"),
-            ("E-Mail", "EMAIL"),
-            ("Web", "WEBSITE"),
-        ]:
-            draw_text(margin, y, f"{label}: {extract_text(provider, field)}")
-            y -= line_height
-
-        y -= 5 * mm
-        draw_text(margin, y, "Rechnung", size=14, bold=True)
-        y -= 8 * mm
-        draw_text(margin, y, "Rechnungsnummer:")
-        draw_text(margin + 40 * mm, y, invoice_nr)
-        y -= line_height
-        draw_text(margin, y, "Kundennummer:")
-        draw_text(margin + 40 * mm, y, cust_id)
-        y -= line_height
-        draw_text(margin, y, "Datum:")
-        draw_text(margin + 40 * mm, y, creation_date)
-        y -= 10 * mm
-
-        draw_text(margin, y, f"Sehr geehrter Herr {extract_text(customer, 'LAST_NAME')},")
-        y -= line_height
-        draw_text(margin, y, "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen.")
-        y -= 10 * mm
-
-        draw_text(margin, y, "Pos. Bezeichnung Preis", bold=True)
-        y -= line_height
-        netto_summe = 0
-
-        for idx, pos in enumerate(positions, 1):
-            name = extract_text(pos, "NAME")
-            desc = extract_text(pos, "DESCRIPTION")
-            area = float(extract_text(pos, "AREA") or 0)
-            unit_price = float(extract_text(pos, "UNIT_PRICE") or 0)
-            total = area * unit_price
-            netto_summe += total
-
-            draw_text(margin, y, f"Pos. {idx} {name}")
-            y -= line_height
-            if desc:
-                for line in desc.splitlines():
-                    draw_text(margin + 5 * mm, y, line)
-                    y -= line_height
-            draw_text(margin + 5 * mm, y, f"{area:.2f} m² EP: {unit_price:.2f} €")
-            draw_right(width - margin, y, f"{total:.2f} €")
-            y -= 2 * line_height
-
-        y -= 2 * line_height
-        vat = netto_summe * vat_rate_positions / 100
-        brutto = netto_summe + vat
-
-        draw_text(margin, y, "Nettobetrag:")
-        draw_right(width - margin, y, f"{netto_summe:.2f} €")
-        y -= line_height
-        draw_text(margin, y, f"zzgl. {vat_rate_positions:.0f} % MwSt.:")
-        draw_right(width - margin, y, f"{vat:.2f} €")
-        y -= line_height
-        draw_text(margin, y, "Bruttobetrag:")
-        draw_right(width - margin, y, f"{brutto:.2f} €")
-        y -= 10 * mm
-
-        lohnsteueranteil = labor_cost * vat_rate_labor / (100 + vat_rate_labor)
-
-        draw_text(margin, y,
-                  f"Überweisen Sie bitte den offenen Betrag in Höhe von {brutto:.2f} € auf das unten aufgeführte Geschäftskonto.")
-        y -= line_height
-        draw_text(margin, y,
-                  f"Im Bruttobetrag sind {labor_cost:.2f} € Lohnkosten enthalten. Die darin enthaltene Mehrwertsteuer beträgt {lohnsteueranteil:.2f} €.")
-        y -= 10 * mm
-
-        draw_text(margin, y, "Mit freundlichen Grüßen")
-        y -= line_height
-        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
-        y -= 15 * mm
-
-        draw_text(margin, y, "Sie sind verpflichtet, die Rechnung zu Steuerzwecken zwei Jahre lang aufzubewahren.")
-        y -= line_height
-        draw_text(margin, y, "Die aufgeführten Arbeiten wurden ausgeführt im Januar 2020.")
-        y -= 10 * mm
-
-        draw_text(margin, y, "Sitz des Unternehmens:")
-        y -= line_height
-        draw_text(margin, y, f"{extract_text(provider, 'PROVIDER_NAME')}")
-        y -= line_height
-        draw_text(margin, y, f"{extract_text(provider, 'STREET')} {extract_text(provider, 'NUMBER')}")
-        y -= line_height
-        draw_text(margin, y, f"{extract_text(provider, 'ZIP')} {extract_text(provider, 'CITY')}")
-        y -= 10 * mm
-
-        draw_text(margin, y, "Bankverbindung:")
-        y -= line_height
-        if bank is not None:
-            draw_text(margin, y, extract_text(bank, "BANK_NAME"))
-            y -= line_height
-            draw_text(margin, y, f"IBAN: {extract_text(bank, 'IBAN')}")
-            y -= line_height
-            draw_text(margin, y, f"BIC: {extract_text(bank, 'BIC')}")
-        else:
-            draw_text(margin, y, "(nicht angegeben)")
-            y -= 2 * line_height
-
-        y -= 5 * mm
-        draw_text(margin, y, "Geschäftsführung:")
-        y -= line_height
-        draw_text(margin, y, extract_text(ceo, "CEO_NAME"))
-        y -= line_height
-        draw_text(margin, y, f"St.-Nr.: {extract_text(ceo, 'ST_NR')}")
-        y -= line_height
-        draw_text(margin, y, f"USt-IdNr.: {ust_id}")
-
-        c.setFont("Helvetica", 8)
-        c.drawString(margin, 10 * mm, "BackOffice 2020 – Das ideale Rechnungsprogramm für Handwerksbetriebe")
-        c.drawRightString(width - margin, 10 * mm, "Seite 1 von 1")
-        c.save()
-        return output_path
-
     def adjust_tableview_columns(self, table_view: QTableView):
         """Setzt erste Spalte rechtsbündig, alle Spalten ResizeToContents, und erste Spalte etwas breiter."""
         model = table_view.model()
@@ -1776,7 +1587,7 @@ class MainWindow(QMainWindow):
 
     def show_invoice_pdf(self, pdf_path):
         self.pdf_document.load(pdf_path)
-        self.pdf_view.setPageMode(QPdfView.PageMode.SinglePage)
+        self.pdf_view.setPageMode(QPdfView.PageMode.MultiPage)
         self.pdf_view.setZoomMode(QPdfView.ZoomMode.FitInView)
 
         if self.w_rechnung_hinzufuegen.isVisible():
@@ -1803,7 +1614,8 @@ class MainWindow(QMainWindow):
                     logo_bytes = result[0]
 
         pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
-        self.create_invoice_pdf(xml_string, logo_bytes, pdf_path)
+        builder = InvoicePDFBuilder(xml_string, logo_bytes)
+        builder.build(pdf_path)
         self.show_invoice_pdf(pdf_path)
 
     def create_missing_invoice_pdfs(self):

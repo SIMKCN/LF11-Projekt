@@ -166,7 +166,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>3</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -336,7 +336,7 @@
                      <string> %</string>
                     </property>
                     <property name="maximum">
-                     <double>100.000000000000000</double>
+                     <double>100000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -365,7 +365,7 @@
                      <string> %</string>
                     </property>
                     <property name="maximum">
-                     <double>100.000000000000000</double>
+                     <double>100000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1352,6 +1352,9 @@
                 <property name="suffix">
                  <string> €</string>
                 </property>
+                <property name="maximum">
+                 <double>100000000.000000000000000</double>
+                </property>
                </widget>
               </item>
               <item row="3" column="0">
@@ -1409,6 +1412,12 @@
                 </property>
                 <property name="suffix">
                  <string> qm</string>
+                </property>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100000000.000000000000000</double>
                 </property>
                </widget>
               </item>

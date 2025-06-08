@@ -43,7 +43,7 @@ def has_right(parent, user_id, permission_name):
     try:
         allowed = user_has_permission(user_id, permission_name)
         if not allowed and parent is not None:
-            QMessageBox.critical(parent, "Berechtigung", "Du hast nicht die nötigen Rechte für diese Aktion!")
+            QMessageBox.critical(parent, "Berechtigungsfehler", "Sie haben nicht die nötigen Rechte für diese Aktion!")
         return allowed
     except Exception as e:
         if parent is not None:

@@ -23,6 +23,7 @@ from PyQt6.QtPdf import QPdfDocument
 from PyQt6.QtPdfWidgets import QPdfView
 
 import config
+from auth.user_management import user_has_permission
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
 from validation import *
@@ -1814,12 +1815,23 @@ class MainWindow(QMainWindow):
             positions_rows = cur.fetchall()
             positions_columns = [desc[0] for desc in cur.description]
 
+            # Bankverbindung(en) zum Dienstleister
+            cur.execute("""
+                SELECT acc.IBAN, acc.FK_BANK_ID AS BIC, b.BANK_NAME
+                FROM ACCOUNT acc
+                JOIN BANK b ON acc.FK_BANK_ID = b.BIC
+                WHERE acc.FK_UST_IDNR = (SELECT FK_UST_IDNR FROM INVOICES WHERE INVOICE_NR = ?)
+            """, (invoice_nr,))
+            accounts_rows = cur.fetchall()
+            accounts_columns = [desc[0] for desc in cur.description]
+
         export_data = [
             {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
             {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},
             {"service_provider": dict(zip(provider_columns, provider_row)) if provider_row else {}},
             {"ceos": [dict(zip(ceos_columns, row)) for row in ceos_rows]},
-            {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]}
+            {"positions": [dict(zip(positions_columns, row)) for row in positions_rows]},
+            {"accounts": [dict(zip(accounts_columns, row)) for row in accounts_rows]}
         ]
         return export_data
 
@@ -1843,13 +1855,8 @@ class MainWindow(QMainWindow):
     def open_user_management(self):
         # Rechteprüfung nur, wenn aktiviert
         if IS_AUTHORIZATION_ACTIVE:
-            # Hier kannst du z.B. prüfen, ob der aktuelle User das Recht 'admin_panel' hat
-            # Simples Beispiel (ohne echten Nutzerkontext):
-            # from usermanager import user_has_permission
-            # if not user_has_permission(current_user_id, "admin_panel"):
-            #     QMessageBox.warning(self, "Nicht erlaubt", "Keine Berechtigung!")
-            #     return
-            pass  # Rechteprüfung kann hier später ergänzt werden
+            if not has_right(self, self.current_user_id, 'admin'):
+                return
         dialog = UserManagementDialog(self)
         dialog.exec()
 

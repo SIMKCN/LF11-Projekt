@@ -78,3 +78,13 @@ def user_has_permission(user_id, permission_name):
     ret = c.fetchone()
     conn.close()
     return ret is not None
+
+def check_user_credentials(username, password):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT PASSWORD_HASH FROM USERS WHERE USERNAME=?", (username,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return bcrypt.checkpw(password.encode(), row[0].encode())
+    return False

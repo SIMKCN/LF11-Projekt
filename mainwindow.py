@@ -112,7 +112,7 @@ class PositionDialog(QDialog):
 
 # Class :QMainWindow: for the whole UI functionality
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, username):
         super().__init__()
         try:
             # load UI file
@@ -120,6 +120,8 @@ class MainWindow(QMainWindow):
         except Exception as e:
             show_error(self, "UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
             sys.exit(1)
+        if username:
+            self.setWindowTitle(f"{self.windowTitle()} - angemeldet als {username}")
 
         # Mapping: QTableViews to database views
         self.table_mapping = {

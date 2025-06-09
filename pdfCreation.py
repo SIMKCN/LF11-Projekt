@@ -295,7 +295,7 @@ class InvoicePDFBuilder:
         
         last_name = self._extract(self.customer, 'LAST_NAME')
         greeting = [
-            f"Sehr geehrter Herr {last_name}," if last_name else "Sehr geehrter Kunde,",
+            f"Sehr geehrte Damen und Herren, ",
             "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen."
         ]
         

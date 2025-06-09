@@ -295,7 +295,7 @@ class InvoicePDFBuilder:
         
         last_name = self._extract(self.customer, 'LAST_NAME')
         greeting = [
-            f"Sehr geehrter Herr {last_name}," if last_name else "Sehr geehrter Kunde,",
+            f"Sehr geehrte Damen und Herren, ",
             "vielen Dank für Ihren Auftrag, den wir wie folgt in Rechnung stellen."
         ]
         
@@ -385,25 +385,43 @@ class InvoicePDFBuilder:
             self.y -= self.line_height
 
     def _draw_totals(self):
-        self._check_page_break(30*mm)
-        self.y -= 5*mm
+        self._check_page_break(50*mm)  # Increased space for expanded table
+        self.y -= 25*mm
+        
+        # Extract values with null checks
+        positions_netto = self.netto_summe
+        try:
+            labor_netto = float(self._extract(self.invoice, "LABOR_COST", "0"))
+        except ValueError:
+            labor_netto = 0.0
+            
+        vat_rate_positions = float(self._extract(self.invoice, "VAT_RATE_POSITIONS", "19")) / 100
+        vat_rate_labor = float(self._extract(self.invoice, "VAT_RATE_LABOR", "19")) / 100
         
         # Calculate values
-        netto = self.netto_summe
-        ust = netto * float(self._extract(self.invoice, "VAT_RATE_POSITIONS").strip())
-        brutto = netto + ust
+        tax_positions = positions_netto * vat_rate_positions
+        tax_labor = labor_netto * vat_rate_labor
+        total_netto = positions_netto + labor_netto
+        total_tax = tax_positions + tax_labor
+        total_brutto = total_netto + total_tax
         
-        # Draw table
+        # Build table data
         data = [
-            ["Nettobetrag:", f"{netto:.2f} €"],
-            ["Umsatzsteuer 19%:", f"{ust:.2f} €"],
-            ["Rechnungsbetrag:", f"{brutto:.2f} €"]
+            ["Nettobetrag Positionen:", f"{positions_netto:.2f} €"],
+            ["Nettobetrag Arbeitskosten:", f"{labor_netto:.2f} €"],
+            ["Zwischensumme Netto:", f"{total_netto:.2f} €", ""],
+            [f"Umsatzsteuer {vat_rate_positions*100:.0f}% (Positionen):", f"{tax_positions:.2f} €"],
+            [f"Umsatzsteuer {vat_rate_labor*100:.0f}% (Arbeitskosten):", f"{tax_labor:.2f} €"],
+            ["Gesamt Umsatzsteuer:", f"{total_tax:.2f} €"],
+            ["Rechnungsbetrag (Brutto):", f"{total_brutto:.2f} €"]
         ]
         
-        table = Table(data, colWidths=[100*mm, 50*mm])
+        table = Table(data, colWidths=[110*mm, 40*mm])
         table.setStyle(TableStyle([
-            ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 10),
+            ('FONT', (0, 0), (-1, -2), 'Helvetica', 10),
+            ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 10),
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('LINEABOVE', (0, 3), (-1, 3), 0.5, colors.grey),
             ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -411,20 +429,19 @@ class InvoicePDFBuilder:
         
         table.wrapOn(self.canvas, self.width - 2*self.margin, self.height)
         table.drawOn(self.canvas, self.width - self.margin - 150*mm, self.y - 20*mm)
-        self.y -= 30*mm
+        self.y -= 30*mm  # More space for expanded table
+        self.total_brutto = total_brutto  # Store for closing section
 
     def _draw_closing(self):
-        self._check_page_break(20*mm)
+        self._check_page_break(100*mm)  # More space for bank info
         
         closing = [
             "Vielen Dank für Ihren Auftrag.",
-            f"Überweisen Sie bitte den offenen Betrag in Höhe von {(self.netto_summe * float(self._extract(self.invoice, 'VAT_RATE_POSITIONS').strip())) + self.netto_summe:.2f} € auf das unten aufgeführte Geschäftskonto.",
+            f"Überweisen Sie bitte den offenen Betrag in Höhe von {self.total_brutto:.2f} € auf eines der unten aufgeführten Geschäftskonten.",
             ""
         ]
         
         for text in closing:
-            if not text:
-                continue
             h = self._draw_paragraph(
                 self.margin, 
                 self.y, 
@@ -435,6 +452,46 @@ class InvoicePDFBuilder:
             if h > 0:
                 self.y -= h + 1*mm
             
+        self.y -= 8*mm
+        
+        # Add bank information header
+        h = self._draw_paragraph(
+            self.margin,
+            self.y,
+            "Bankverbindung:",
+            self.styles['Bold'],
+            self.width - 2*self.margin
+        )
+        self.y -= h + 3*mm if h > 0 else 5*mm
+        
+        # Add bank accounts
+        accounts = self.root.findall(".//account")
+        if not accounts:
+            h = self._draw_paragraph(
+                self.margin + 5*mm,  # Indent slightly
+                self.y, 
+                "Bankverbindung ist in diesem Dokument nicht enthalten. Für weitere Informationen wenden Sie sich bitte an uns.", 
+                self.styles['NormalWrap'], 
+                self.width - 2*self.margin - 5*mm
+            )
+            if h > 0:
+                self.y -= h + 2*mm
+        for account in accounts:
+            bank_name = self._extract(account, "BANK_NAME")  
+            iban = self._extract(account, "IBAN")
+            bic = self._extract(account, "BIC")
+            
+            bank_info = f"{bank_name}: IBAN {iban} • BIC {bic}"
+            h = self._draw_paragraph(
+                self.margin + 5*mm,  # Indent slightly
+                self.y, 
+                bank_info, 
+                self.styles['NormalWrap'], 
+                self.width - 2*self.margin - 5*mm
+            )
+            if h > 0:
+                self.y -= h + 2*mm
+                
         self.y -= 10*mm
 
     def _draw_footer(self):

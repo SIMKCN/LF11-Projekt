@@ -245,8 +245,8 @@ class InvoicePDFBuilder:
             elements += [(self._extract(ceo, "CEO_NAME"), False)]
 
         elements += [
-            (self._extract(self.provider, 'STREET') + self._extract(self.provider, 'NUMBER'), False),
-            (self._extract(self.provider, 'ZIP') + self._extract(self.provider, 'CITY'), False)
+            (self._extract(self.provider, 'STREET') + " " + self._extract(self.provider, 'NUMBER'), False),
+            (self._extract(self.provider, 'ZIP') + " " + self._extract(self.provider, 'CITY'), False)
         ]
 
         meta_y = self.height - self.margin - 30*mm

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Invoice Manager</string>
+   <string>Rechnungsverwaltung</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -75,6 +75,25 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_nutzer_verwalten">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Nutzerverwaltung</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
@@ -166,7 +185,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>3</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -336,7 +355,7 @@
                      <string> %</string>
                     </property>
                     <property name="maximum">
-                     <double>100.000000000000000</double>
+                     <double>100000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -365,7 +384,7 @@
                      <string> %</string>
                     </property>
                     <property name="maximum">
-                     <double>100.000000000000000</double>
+                     <double>100000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1352,6 +1371,9 @@
                 <property name="suffix">
                  <string> €</string>
                 </property>
+                <property name="maximum">
+                 <double>100000000.000000000000000</double>
+                </property>
                </widget>
               </item>
               <item row="3" column="0">
@@ -1409,6 +1431,12 @@
                 </property>
                 <property name="suffix">
                  <string> qm</string>
+                </property>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100000000.000000000000000</double>
                 </property>
                </widget>
               </item>

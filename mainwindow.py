@@ -219,6 +219,7 @@ class MainWindow(QMainWindow):
         self.init_tv_rechnungen_form_tabellen()
         self.tv_detail_positionen = self.findChild(QTableView, "tv_detail_positionen")
         os.makedirs(EXPORT_OUTPUT_PATH, exist_ok=True)
+        print(EXPORT_OUTPUT_PATH)
 
 
         # PDF Dokument & Viewer erstellen
@@ -1847,6 +1848,7 @@ class MainWindow(QMainWindow):
 
             if not os.path.exists(pdf_path):
                 self.create_and_show_invoice_pdf(invoice_nr)
+                print("Pfad exisitert nicht")
 
             os.startfile(pdf_path, 'open')
         except Exception as e:

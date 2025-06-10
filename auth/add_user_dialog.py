@@ -1,10 +1,12 @@
 from PyQt6 import uic
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QDialog, QMessageBox
 
 from auth.user_management import get_all_permissions, update_user, add_user
 
 
 class AddUserDialog(QDialog):
+    user_changed = pyqtSignal()
     def __init__(self, parent=None, user=None):
         super().__init__(parent)
         uic.loadUi("Qt/add_user_dialog.ui", self)
@@ -51,6 +53,7 @@ class AddUserDialog(QDialog):
                 return
             try:
                 add_user(username, pw1, perms)
+                self.user_changed.emit()
             except Exception as e:
                 QMessageBox.warning(self, "Fehler", f"Fehler beim Anlegen: {e}")
                 return
@@ -61,6 +64,7 @@ class AddUserDialog(QDialog):
                 return
             try:
                 update_user(self.user["id"], username, password, perms)
+                self.user_changed.emit()
             except Exception as e:
                 QMessageBox.warning(self, "Fehler", f"Fehler beim Bearbeiten: {e}")
                 return

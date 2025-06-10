@@ -62,6 +62,9 @@ def update_user(user_id, username, password, permission_ids):
 def delete_user(user_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    # Erst alle Permissions-Referenzen entfernen
+    c.execute("DELETE FROM REF_USER_PERMISSIONS WHERE USER_ID=?", (user_id,))
+    # Dann den User selbst löschen
     c.execute("DELETE FROM USERS WHERE ID=?", (user_id,))
     conn.commit()
     conn.close()

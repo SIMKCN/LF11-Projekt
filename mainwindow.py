@@ -1,6 +1,7 @@
 # IMPORT other Packages
 import mimetypes
 import sqlite3
+import subprocess
 from datetime import date
 import sys
 from functools import partial
@@ -25,7 +26,8 @@ import config
 # IMPORT Functions from local scripts
 from database import get_next_primary_key, fetch_all
 from validation import *
-from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, EXPORT_OUTPUT_PATH, IS_AUTHORIZATION_ACTIVE
+from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, CACHE_OUTPUT_PATH, IS_AUTHORIZATION_ACTIVE, \
+    MIN_LENGTH_EXPORT
 from auth.user_management_dialog import UserManagementDialog
 from utils import show_error, format_exception, show_info, has_right
 from logic import get_service_provider_ceos
@@ -33,7 +35,7 @@ from logic import get_service_provider_ceos
 from pdfCreation import InvoicePDFBuilder
 
 class PasswordDialog(QDialog):
-    def __init__(self, min_length=4, parent=None):
+    def __init__(self, min_length=MIN_LENGTH_EXPORT, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Passwort festlegen")
         self.min_length = min_length
@@ -105,10 +107,10 @@ class PositionDialog(QDialog):
     # Function to get the data
     def get_data(self):
         return {
-            "NAME": self.le_name.text(),
-            "DESCRIPTION": self.te_description.toPlainText(),
-            "AREA": self.sb_area.value(),
-            "UNIT_PRICE": self.sb_unit_price.value(),
+            "Bezeichnung": self.le_name.text(),
+            "Beschreibung": self.te_description.toPlainText(),
+            "Fläche": self.sb_area.value(),
+            "Einzelpreis": self.sb_unit_price.value(),
         }
 
 # Class :QMainWindow: for the whole UI functionality
@@ -121,7 +123,7 @@ class MainWindow(QMainWindow):
             # load UI file
             uic.loadUi(UI_PATH, self)
         except Exception as e:
-            show_error(self, "UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
+            print("UI Loading Error", f"Could not load UI file.\nError: {str(e)}")
             sys.exit(1)
         if username:
             self.setWindowTitle(f"{self.windowTitle()} - angemeldet als {username}")
@@ -215,8 +217,7 @@ class MainWindow(QMainWindow):
         self.selected_dienstleister_id = None
         self.init_tv_rechnungen_form_tabellen()
         self.tv_detail_positionen = self.findChild(QTableView, "tv_detail_positionen")
-        os.makedirs(EXPORT_OUTPUT_PATH, exist_ok=True)
-        print(EXPORT_OUTPUT_PATH)
+        os.makedirs(CACHE_OUTPUT_PATH, exist_ok=True)
 
 
         # PDF Dokument & Viewer erstellen
@@ -369,7 +370,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error while loading {db_view}: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Database Error", error_message)
             table_view.setModel(QStandardItemModel())
             return
 
@@ -400,7 +400,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error while populating table {db_view}: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Table Population Error", error_message)
 
     # Clears and enables all form fields
     def clear_and_enable_form_fields(self):
@@ -438,7 +437,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error while clearing and enabling form fields: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Form Reset Error", error_message)
 
     # Handles the event when a row is selected in a table view
     def on_row_selected(self, current: QModelIndex, previous: QModelIndex, db_view: str, table_view: QTableView):
@@ -463,7 +461,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error handling row selection in {db_view}: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Row Selection Error", error_message)
 
     # Updates the current form and lbl_eintrag_erstellt_datum with the selected row's data
     def update_form(self, current: QModelIndex, table_view: QTableView):
@@ -472,10 +469,40 @@ class MainWindow(QMainWindow):
             return
 
         try:
+            # Speziell: CEOs für Dienstleister immer korrekt aus DB holen!
+            if table_view.objectName() == "tv_dienstleister":
+                ust_idnr = current.sibling(current.row(), 0).data()
+                ceo_widget = self.findChild(QLineEdit, "tv_dienstleister_CEOS")
+                if ceo_widget:
+                    ceo_names = []
+                    try:
+                        import sqlite3
+                        from config import DB_PATH
+                        with sqlite3.connect(DB_PATH) as conn:
+                            cur = conn.cursor()
+                            cur.execute("""
+                                SELECT CEO.CEO_NAME
+                                FROM CEO
+                                JOIN REF_LABOR_COST ON CEO.ST_NR = REF_LABOR_COST.FK_ST_NR
+                                WHERE REF_LABOR_COST.FK_UST_IDNR = ?
+                            """, (ust_idnr,))
+                            ceo_names = [row[0] for row in cur.fetchall()]
+                    except Exception as e:
+                        ceo_names = []
+                    ceo_widget.setText(", ".join(ceo_names))
+                    ceo_widget.setEnabled(False)
+
             for col in range(model.columnCount()):
                 column_name = model.headerData(col, Qt.Orientation.Horizontal)
                 value = current.sibling(current.row(), col).data()
-                widget = self.findChild((QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit), f"{table_view.objectName()}_{column_name}")
+                widget = self.findChild((QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit),
+                                        f"{table_view.objectName()}_{column_name}")
+
+                # CEOs werden schon oben gesetzt!
+                if table_view.objectName() == "tv_dienstleister" and column_name == "CEOS" and isinstance(widget,
+                                                                                                          QLineEdit):
+                    continue
+
                 if isinstance(widget, QLineEdit):
                     widget.setText(str(value) if value is not None else "")
                     widget.setEnabled(False)
@@ -495,7 +522,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error updating form : {format_exception(e)}"
             print(error_message)
-            show_error(self, "Form Update Error", error_message)
 
     # Loads CEO details for a selected service provider
     def load_service_provider_details(self, service_provider_id: str):
@@ -515,7 +541,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error while loading CEO details: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Database Error", error_message)
 
     # Loads all positions for selected row from INVOICE_ID
     def load_invoice_positions(self, invoice_id: str):
@@ -548,7 +573,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             error_message = f"Error while loading invoice positions: {format_exception(e)}"
             print(error_message)
-            show_error(self, "Database Error", error_message)
 
     def load_positions_invoices(self, row_id):
         try:
@@ -577,7 +601,7 @@ class MainWindow(QMainWindow):
                 self.tv_detail_positionen.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
                 self.tv_detail_positionen.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         except Exception as e:
-            show_error(self, "Fehler beim Laden der Rechnungen", str(e))
+            print("Fehler beim Laden der Rechnungen", str(e))
 
     # Updates 'lbl_search_for' with corresponding tab name
     def on_tab_changed(self, index):
@@ -913,7 +937,7 @@ class MainWindow(QMainWindow):
                                     (st_nr, ust_idnr)
                                 )
                         except Exception as e:
-                            show_error(self, "Fehler beim Speichern",
+                            print("Fehler beim Speichern",
                                        f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
                             return
 
@@ -978,11 +1002,7 @@ class MainWindow(QMainWindow):
                 elif field_name in ["tv_kunden_Strasse", "tv_kunden_Stadt", "tv_kunden_Land"]:
                     if not value:
                         errors.append(f"{field_name.replace('tv_kunden_', '')} darf nicht leer sein.")
-                elif field_name == "tv_kunden_Geschlecht":
-                    # optional, kein Fehler
-                    pass
                 else:
-                    # alle anderen Felder außer Geschlecht und Kundennummer müssen ausgefüllt sein
                     if not value:
                         errors.append(f"{field_name.replace('tv_kunden_', '')} darf nicht leer sein.")
                 data_map[field_name] = value
@@ -1128,14 +1148,44 @@ class MainWindow(QMainWindow):
         if model:
             self.selected_kunde_id = model.item(index.row(), 0).text()
 
+    import sqlite3
+
     def on_dienstleister_selected(self, selected, deselected):
         if not selected.indexes():
             self.selected_dienstleister_id = None
+            # Feld leeren und aktivieren
+            self.tv_dienstleister_CEOS.setText("")
+            self.tv_dienstleister_CEOS.setDisabled(False)
             return
+
         index = selected.indexes()[0]
-        model = self.tv_rechnungen_form_dienstleister.model()
-        if model:
-            self.selected_dienstleister_id = model.item(index.row(), 0).text()
+        model = self.tv_dienstleister.model()
+        if not model:
+            self.selected_dienstleister_id = None
+            self.tv_dienstleister_CEOS.setText("")
+            self.tv_dienstleister_CEOS.setDisabled(False)
+            return
+
+        self.selected_dienstleister_id = model.item(index.row(), 0).text()
+
+        # Geschäftsführer aus der DB laden
+        ceo_names = []
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT CEO.CEO_NAME
+                    FROM CEO
+                    JOIN REF_LABOR_COST ON CEO.ST_NR = REF_LABOR_COST.FK_ST_NR
+                    WHERE REF_LABOR_COST.FK_UST_IDNR = ?
+                """, (self.selected_dienstleister_id,))
+                ceo_names = [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            show_error(self, "Fehler", f"Geschäftsführer konnten nicht geladen werden: {e}")
+
+        # Feld befüllen und deaktivieren
+        self.tv_dienstleister_CEOS.setText(", ".join(ceo_names))
+        self.tv_dienstleister_CEOS.setDisabled(True)
 
     def update_positionen_tableview(self):
         model = QStandardItemModel()
@@ -1168,7 +1218,7 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             pos_data = dlg.get_data()
             if not pos_data["NAME"]:
-                show_error(self, "Fehler", "Bitte einen Namen angeben!")
+                show_error(self, "Fehler", "Bitte eine Bezeichnung angeben!")
                 return
             # Rechnungsnummer für spätere Speicherung merken (optional für Validierung)
             rechnungsnummer_feld = self.findChild(QLineEdit, "tb_rechnungsnummer")
@@ -1176,7 +1226,6 @@ class MainWindow(QMainWindow):
             if not rechnungsnummer:
                 show_error(self, "Fehler", "Bitte zuerst eine Rechnungsnummer eintragen!")
                 return
-            # Noch keine POS_ID vergeben! Das macht später die DB.
             pos_data["FK_INVOICE_NR"] = rechnungsnummer
             self.temp_positionen.append(pos_data)
             self.load_all_and_temp_positions_for_rechnungsformular()
@@ -1199,14 +1248,13 @@ class MainWindow(QMainWindow):
                 if current_tab == "tab_rechnungen":
                     idx_rechnung = self.tv_rechnungen.currentIndex()
                     if not idx_rechnung.isValid():
-                        show_error(self, "Nichts ausgewählt!", "Bitte wähle eine Rechnung aus!")
+                        show_error(self, "Nichts ausgewählt!", "Bitte wählen Sie eine Rechnung aus!")
                         return
                     invoice_id = idx_rechnung.sibling(idx_rechnung.row(), 0).data()
                     reply = QMessageBox.question(
                         self,
                         "Rechnung löschen",
-                        f"Möchtest du die Rechnung {invoice_id} wirklich löschen?\n\n"
-                        "Alle zugehörigen Positionen-Verknüpfungen werden entfernt, aber die Positionen selbst bleiben erhalten.",
+                        f"Möchten Sie die Rechnung {invoice_id} wirklich löschen?",
                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                     )
                     if reply != QMessageBox.StandardButton.Yes:
@@ -1222,15 +1270,15 @@ class MainWindow(QMainWindow):
                 elif current_tab == "tab_dienstleister":
                     idx = self.tv_dienstleister.currentIndex()
                     if not idx.isValid():
-                        show_error(self, "Nichts ausgewählt!", "Bitte wähle einen Dienstleister aus!")
+                        show_error(self, "Nichts ausgewählt!", "Bitte wählen Sie einen Dienstleister aus!")
                         return
                     ust_idnr = idx.sibling(idx.row(), 0).data()
                     # Rechnungen zählen
                     cur.execute("SELECT COUNT(*) FROM INVOICES WHERE FK_UST_IDNR=?", (ust_idnr,))
                     rechnungs_anzahl = cur.fetchone()[0]
-                    msg = f"Möchtest du den Dienstleister {ust_idnr} wirklich löschen?\n\n"
+                    msg = f"Möchten Sie den Dienstleister {ust_idnr} wirklich löschen?\n\n"
                     if rechnungs_anzahl > 0:
-                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) (und deren Verknüpfungen) ebenfalls gelöscht!"
+                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) gelöscht!"
                     else:
                         msg += "Es sind keine Rechnungen mit diesem Dienstleister verknüpft."
                     reply = QMessageBox.question(
@@ -1262,21 +1310,21 @@ class MainWindow(QMainWindow):
                     cur.execute("DELETE FROM SERVICE_PROVIDER WHERE UST_IDNR=?", (ust_idnr,))
                     conn.commit()
                     show_info(self, "Erfolg",
-                              f"Dienstleister {ust_idnr} und alle zugehörigen Rechnungen wurden gelöscht.")
+                              f"Dienstleister {ust_idnr} wurde gelöscht.")
                     self.refresh_tab_table_views()
                     return
 
                 elif current_tab == "tab_kunden":
                     idx = self.tv_kunden.currentIndex()
                     if not idx.isValid():
-                        show_error(self, "Nichts ausgewählt!", "Bitte wähle einen Kunden aus!")
+                        show_error(self, "Nichts ausgewählt!", "Bitte wählen Sie einen Kunden aus!")
                         return
                     custid = idx.sibling(idx.row(), 0).data()
                     cur.execute("SELECT COUNT(*) FROM INVOICES WHERE FK_CUSTID=?", (custid,))
                     rechnungs_anzahl = cur.fetchone()[0]
-                    msg = f"Möchtest du den Kunden {custid} wirklich löschen?\n\n"
+                    msg = f"Möchten Sie den Kunden {custid} wirklich löschen?\n\n"
                     if rechnungs_anzahl > 0:
-                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) (und deren Verknüpfungen) ebenfalls gelöscht!"
+                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) gelöscht!"
                     else:
                         msg += "Es sind keine Rechnungen mit diesem Kunden verknüpft."
                     reply = QMessageBox.question(
@@ -1300,21 +1348,21 @@ class MainWindow(QMainWindow):
                         cur.execute("DELETE FROM ADDRESSES WHERE ID=?", (address_row[0],))
                     cur.execute("DELETE FROM CUSTOMERS WHERE CUSTID=?", (custid,))
                     conn.commit()
-                    show_info(self, "Erfolg", f"Kunde {custid} und alle zugehörigen Rechnungen wurden gelöscht.")
+                    show_info(self, "Erfolg", f"Kunde {custid} wurde gelöscht.")
                     self.refresh_tab_table_views()
                     return
 
                 elif current_tab == "tab_positionen":
                     idx = self.tv_positionen.currentIndex()
                     if not idx.isValid():
-                        show_error(self, "Nichts ausgewählt!", "Bitte wähle eine Position aus!")
+                        show_error(self, "Nichts ausgewählt!", "Bitte wählen Sie eine Position aus!")
                         return
                     pos_id = idx.sibling(idx.row(), 0).data()
                     cur.execute("SELECT COUNT(*) FROM REF_INVOICES_POSITIONS WHERE FK_POSITIONS_POS_ID=?", (pos_id,))
                     rechnungs_anzahl = cur.fetchone()[0]
                     msg = f"Möchtest du die Position {pos_id} wirklich löschen?\n\n"
                     if rechnungs_anzahl > 0:
-                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) (und deren m:n-Verknüpfungen) ebenfalls gelöscht!"
+                        msg += f"Achtung: Es werden dabei {rechnungs_anzahl} zugehörige Rechnung(en) gelöscht!"
                     else:
                         msg += "Es sind keine Rechnungen mit dieser Position verknüpft."
                     reply = QMessageBox.question(
@@ -1339,7 +1387,7 @@ class MainWindow(QMainWindow):
                     # Position selbst löschen
                     cur.execute("DELETE FROM POSITIONS WHERE POS_ID=?", (pos_id,))
                     conn.commit()
-                    show_info(self, "Erfolg", f"Position {pos_id} und alle zugehörigen Rechnungen wurden gelöscht.")
+                    show_info(self, "Erfolg", f"Position {pos_id} wurde gelöscht.")
                     self.refresh_tab_table_views()
                     return
 
@@ -1505,23 +1553,27 @@ class MainWindow(QMainWindow):
 
         try:
             export_data = self.get_export_data(invoice_nr)
-            ##########################################
-            # XML ausgeben als Datei
 
             zip_output_path, _ = QFileDialog.getSaveFileName(
                 self,
                 "ZIP-Datei speichern unter",
                 filter="ZIP-Dateien (*.zip);;Alle Dateien (*)",
-                directory="export.zip"  # Vorschlagsname
+                directory="export.zip"
             )
+            if not zip_output_path:
+                return
+
+            output_dir = os.path.dirname(zip_output_path)
+            xml_path = os.path.join(output_dir, "rechnung.xml")
+            pdf_path = os.path.join(output_dir, "rechnung.pdf")
 
             xml_string = self.build_invoice_xml(export_data)
 
+            # Logo aus DB laden (optional)
             fk_logo_id = next(
                 (entry["service_provider"]["FK_LOGO_ID"] for entry in export_data if "service_provider" in entry),
                 None
             )
-
             logo_bytes = None
             with sqlite3.connect(DB_PATH) as conn:
                 if fk_logo_id:
@@ -1531,34 +1583,65 @@ class MainWindow(QMainWindow):
                     if result and result[0] is not None:
                         logo_bytes = result[0]
 
-            with open(EXPORT_OUTPUT_PATH + r"\rechnung.xml", "w", encoding="utf-8") as f:
+            # XML schreiben
+            with open(xml_path, "w", encoding="utf-8") as f:
                 f.write(xml_string)
 
+            # PDF erzeugen
             builder = InvoicePDFBuilder(xml_string, logo_bytes)
-            builder.build(EXPORT_OUTPUT_PATH + r"\rechnung.pdf")
+            builder.build(pdf_path)
 
+            # Passwort-Dialog
             dialog = PasswordDialog(min_length=4)
-            if dialog.exec():
-                passwort = dialog.get_password()
-                with pyzipper.AESZipFile(zip_output_path,
-                                         'w',  # ← 'w' = Write-Modus = immer überschreiben
-                                         compression=pyzipper.ZIP_LZMA,
-                                         encryption=pyzipper.WZ_AES) as zip_file:
+            if not dialog.exec():
+                # Abbruch durch Nutzer
+                # Temporäre Dateien gleich wieder löschen
+                for tmpf in (xml_path, pdf_path):
+                    if os.path.exists(tmpf):
+                        os.remove(tmpf)
+                return
+            passwort = dialog.get_password()
 
-                    zip_file.setpassword(passwort.encode("utf-8"))  # wichtig: bytes
+            import pyzipper
+            with pyzipper.AESZipFile(zip_output_path,
+                                     'w',
+                                     compression=pyzipper.ZIP_LZMA,
+                                     encryption=pyzipper.WZ_AES) as zip_file:
+                zip_file.setpassword(passwort.encode("utf-8"))
+                files_to_add = [
+                    ("rechnung.xml", xml_path),
+                    ("rechnung.pdf", pdf_path)
+                ]
+                for arcname, filepath in files_to_add:
+                    zip_file.write(filepath, arcname=arcname)
 
-                    files_to_add = [
-                        ("rechnung.xml", os.path.join(EXPORT_OUTPUT_PATH, "rechnung.xml")),
-                        ("rechnung.pdf", os.path.join(EXPORT_OUTPUT_PATH, "rechnung.pdf"))
-                    ]
+            # Temporäre Dateien löschen
+            for tmpf in (xml_path, pdf_path):
+                if os.path.exists(tmpf):
+                    os.remove(tmpf)
 
-                    for arcname, filepath in files_to_add:
-                        zip_file.write(filepath, arcname=arcname)
+            # Explorer-Öffnung anbieten
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Export abgeschlossen")
+            msg_box.setText(f"Die Datei wurde erfolgreich gespeichert:\n{zip_output_path}\n\n"
+                            "Möchten Sie den Speicherort im Explorer öffnen?")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            result = msg_box.exec()
 
-                print(f"{zip_output_path} wurde erstellt und mit Passwort geschützt.")
-                conn.close()
-            else:
-                show_info(self, "Abgebrochen", "Der Export wurde abgebrochen.")
+            if result == QMessageBox.StandardButton.Yes:
+                folder = os.path.dirname(zip_output_path)
+                if os.name == "nt":
+                    # Windows
+                    os.startfile(folder)
+                elif os.name == "posix":
+                    # macOS oder Linux
+                    try:
+                        if sys.platform == "darwin":
+                            subprocess.Popen(["open", folder])
+                        else:
+                            subprocess.Popen(["xdg-open", folder])
+                    except Exception as e:
+                        show_error(self, "Fehler", f"Konnte Explorer nicht öffnen: {e}")
 
         except Exception as e:
             show_error(self, "Export-Fehler", str(e))
@@ -1642,7 +1725,7 @@ class MainWindow(QMainWindow):
             self,
             "Logo auswählen",
             "",
-            "Bilder (*.png *.jpg *.jpeg *.bmp *.svg);;Alle Dateien (*)"
+            "Bilder (*.png *.jpg *.jpeg *.bmp *.svg)"
         )
         if file_path:
             self.selected_files = [file_path]
@@ -1758,9 +1841,8 @@ class MainWindow(QMainWindow):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
         table_view.resizeColumnsToContents()
         # Erste Spalte extra breit machen
-        extra = 100  # Pixel-Zuschlag, nach Bedarf anpassen
         current_width = table_view.columnWidth(0)
-        table_view.setColumnWidth(0, current_width + extra)
+        table_view.setColumnWidth(0, current_width)
 
     def print_invoice(self):
         return False
@@ -1788,7 +1870,7 @@ class MainWindow(QMainWindow):
                 if result and result[0] is not None:
                     logo_bytes = result[0]
 
-        pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+        pdf_path = os.path.join(CACHE_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
         builder = InvoicePDFBuilder(xml_string, logo_bytes)
         builder.build(pdf_path)
         self.show_invoice_pdf(pdf_path)
@@ -1800,7 +1882,7 @@ class MainWindow(QMainWindow):
             all_invoices = [row[0] for row in cur.fetchall()]
         missing = []
         for invoice_nr in all_invoices:
-            pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+            pdf_path = os.path.join(CACHE_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
             if not os.path.exists(pdf_path):
                 missing.append(invoice_nr)
         if not missing:
@@ -1893,7 +1975,7 @@ class MainWindow(QMainWindow):
                 return
 
             invoice_nr = idx.sibling(idx.row(), 0).data()
-            pdf_path = os.path.join(EXPORT_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
+            pdf_path = os.path.join(CACHE_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
 
             if not os.path.exists(pdf_path):
                 self.create_and_show_invoice_pdf(invoice_nr)

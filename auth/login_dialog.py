@@ -11,7 +11,7 @@ class LoginDialog(QDialog):
         self.edit_pass = QLineEdit()
         self.edit_pass.setEchoMode(QLineEdit.EchoMode.Password)
 
-        self.btn_login = QPushButton("Login")
+        self.btn_login = QPushButton("Anmelden")
         self.btn_login.clicked.connect(self.try_login)
 
         layout = QVBoxLayout()
@@ -39,7 +39,8 @@ class LoginDialog(QDialog):
             self._user_id = get_user_id_by_username(username)  # Hole user_id aus der DB
             self.accept()
         else:
-            QMessageBox.warning(self, "Fehler", "Benutzername oder Passwort falsch!")
+            QMessageBox.warning(self, "Anmeldungsfehler", "Die eingegebenen Nutzerdaten wurden nicht gefunden\n"
+                                                          "Bitte prüfen Sie Ihre Eingabe.")
             self.edit_pass.clear()
             self.edit_pass.setFocus()
         self._login_in_progress = False

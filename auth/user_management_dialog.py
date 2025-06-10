@@ -1,6 +1,6 @@
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QPushButton, QTableWidget
+from PyQt6.QtWidgets import QDialog, QMessageBox, QTableWidgetItem, QPushButton, QTableWidget, QHeaderView
 
 from auth.add_user_dialog import AddUserDialog
 from auth.user_management import get_users_with_permissions, delete_user
@@ -10,7 +10,7 @@ class UserManagementDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         uic.loadUi("Qt/user_management_dialog.ui", self)
-        print("Dialog geladen")
+        self.resize(600, 400)
 
         # Connect Signal for Click on 'btnAddUser'
         self.btnAddUser = self.findChild(QPushButton, "btnAddUser")
@@ -26,6 +26,11 @@ class UserManagementDialog(QDialog):
             self.btnDeleteUser.clicked.connect(self.delete_user)
 
         self.tableUsers = self.findChild(QTableWidget, "tableUsers")
+        if self.tableUsers:
+            header = self.tableUsers.horizontalHeader()
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            self.tableUsers.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+            self.tableUsers.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 
         self.load_users()
 
@@ -41,7 +46,6 @@ class UserManagementDialog(QDialog):
             self.tableUsers.setItem(row, 0, self._make_item(str(uid)))
             self.tableUsers.setItem(row, 1, self._make_item(username))
             self.tableUsers.setItem(row, 2, self._make_item(perms or ""))
-        print("Nutzer geladen")
 
     def _make_item(self, text):
         item = QTableWidgetItem(text)
@@ -59,8 +63,8 @@ class UserManagementDialog(QDialog):
 
     def add_user(self):
         dialog = AddUserDialog(self)
-        if dialog.exec() == dialog.accepted:
-            self.load_users()
+        dialog.user_changed.connect(self.load_users)
+        dialog.exec()
 
     def edit_user(self):
         user = self.get_selected_user()
@@ -68,15 +72,20 @@ class UserManagementDialog(QDialog):
             QMessageBox.warning(self, "Fehler", "Bitte einen Nutzer auswählen.")
             return
         dialog = AddUserDialog(self, user=user)
-        if dialog.exec() == dialog.accepted:
-            self.load_users()
+        dialog.user_changed.connect(self.load_users)
+        dialog.exec()
 
     def delete_user(self):
         user = self.get_selected_user()
         if not user:
             QMessageBox.warning(self, "Fehler", "Bitte einen Nutzer auswählen.")
             return
-        res = QMessageBox.question(self, "Nutzer löschen", f"Nutzer '{user['username']}' wirklich löschen?")
-        if res == QMessageBox.y:
+        res = QMessageBox.question(
+            self,
+            "Nutzer löschen",
+            f"Nutzer '{user['username']}' wirklich löschen?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if res == QMessageBox.StandardButton.Yes:
             delete_user(user["id"])
             self.load_users()

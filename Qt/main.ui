@@ -96,23 +96,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Neu</string>
-          </property>
-          <property name="icon">
-           <iconset>
-            <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="btn_eintrag_loeschen">
           <property name="minimumSize">
            <size>
@@ -164,6 +147,23 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btn_eintrag_hinzufuegen">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Neu</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/plus.png</normaloff>icons/plus.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_eintrag_speichern">
           <property name="minimumSize">
            <size>
@@ -185,7 +185,7 @@
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>3</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab_rechnungen">
          <attribute name="title">
@@ -218,6 +218,9 @@
           </item>
           <item>
            <widget class="QWidget" name="w_rechnung_hinzufuegen" native="true">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -1501,8 +1504,8 @@
      <y>567</y>
     </hint>
     <hint type="destinationlabel">
-     <x>210</x>
-     <y>91</y>
+     <x>886</x>
+     <y>158</y>
     </hint>
    </hints>
   </connection>
@@ -1513,12 +1516,12 @@
    <slot>hide()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>231</x>
-     <y>106</y>
+     <x>787</x>
+     <y>102</y>
     </hint>
     <hint type="destinationlabel">
-     <x>210</x>
-     <y>91</y>
+     <x>886</x>
+     <y>158</y>
     </hint>
    </hints>
   </connection>

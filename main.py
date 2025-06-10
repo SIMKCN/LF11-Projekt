@@ -18,7 +18,8 @@ def main():
         user_id = login.get_user_id()
         username = login.edit_user.text().strip()
         if not user_id:
-            QMessageBox.critical(None, "Fehler", "Benutzerdaten konnten nicht ermittelt werden!")
+            QMessageBox.critical(None, "Anmeldefehler", "Ihre eingegebenen Benutzerdaten wurden nicht gefunden!\n"
+                                                        "Haben Sie sich eingeloggt?")
             sys.exit(1)
     else:
         user_id = None  # z.B. 0 für Gast

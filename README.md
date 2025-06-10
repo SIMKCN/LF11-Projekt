@@ -24,10 +24,9 @@ Erstellung einer Rechungserstellungssoftware
 
 ## Todo
 
+ALLES FERTIG - ICH KANNS NICHT GLAUBEN
+WIR HABEN ENDLICH WIEDER FREIZEIT
 
-- [ ]     12.    Form Validation Rules erfassen und umsetzen
-- [ ] 18. Styling verbessern
-    - [ ] Padding obere und linke Seite erhöhen (3-4px ?)
 
 ### DONE
 - [x]    GUI erstellen
@@ -63,4 +62,7 @@ Erstellung einer Rechungserstellungssoftware
     - [x]    Auswahl von Kunden
     - [x]    Auswahl von mehreren Positionen + Bulk anlegen Button 18.05.2025
 - [X]   LOGO upload umsetzen
-- [ ]   Rechnungen als PDF exportieren mit Druckvorschau
+- [x]   Rechnungen als PDF exportieren mit Druckvorschau
+- [x]   Form Validation Rules erfassen und umsetzen
+- [x] Styling verbessern
+    - [ ] Padding obere und linke Seite erhöhen (3-4px ?) (zurückgestellt)

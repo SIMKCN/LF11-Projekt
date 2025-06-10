@@ -1485,6 +1485,8 @@ class MainWindow(QMainWindow):
 
     def update_export_button_state(self, index):
         current_tab = self.tabWidget.widget(index)
+        if not has_right(self, self.current_user_id, 'read'):
+            return
         if not self.btn_rechnung_exportieren or not self.btn_drucken:
             return
         if current_tab and current_tab.objectName() == "tab_rechnungen":

@@ -817,7 +817,6 @@ class MainWindow(QMainWindow):
 
                 elif current_tab == "tab_dienstleister":
                     address_data = rel_data.get("addresses", {})
-
                     cur.execute(
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
                         (
@@ -830,7 +829,6 @@ class MainWindow(QMainWindow):
                         )
                     )
                     address_id = cur.lastrowid
-
                     logo_id = None
                     if (getattr(self, "file_name", None) and getattr(self, "logo_data", None) and len(
                             self.logo_data) > 0):
@@ -847,7 +845,6 @@ class MainWindow(QMainWindow):
                             )
                         )
                         logo_id = cur.lastrowid
-
                     cur.execute(
                         "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
@@ -863,7 +860,6 @@ class MainWindow(QMainWindow):
                             logo_id
                         )
                     )
-
                     bank_data = rel_data.get("accounts", {})
                     bic = bank_data.get("tv_dienstleister_BIC", "")
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
@@ -877,9 +873,24 @@ class MainWindow(QMainWindow):
                             "INSERT INTO ACCOUNT (IBAN, FK_BANK_ID, FK_UST_IDNR) VALUES (?, ?, ?)",
                             (iban, bic, main_data.get("tv_dienstleister_UStIdNr", ""))
                         )
-
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
+
+                    # Prüfe auf doppelte Namen
+                    unique_names = set()
+                    duplicate_names = set()
+                    for name in ceo_names:
+                        if name in unique_names:
+                            duplicate_names.add(name)
+                        else:
+                            unique_names.add(name)
+
+                    if duplicate_names:
+                        # Es gibt doppelte Namen, nur EIN Dialog für den jeweiligen Namen anzeigen
+                        show_error(self, "Fehler",
+                                   f"HALLO ???!! Bist du dumm? Was gibst du zweimal den selben Namen ein? \n"
+                                   f"Verfatz dich!")
+                        ceo_names = list(unique_names)
 
                     while ceo_names:
                         ceo_dlg = CEOStNrDialog(ceo_names, self)
@@ -904,7 +915,7 @@ class MainWindow(QMainWindow):
                                 break
                             used_steuernrs.add(st_nr)
                             try:
-                                cur.execute("SELECT CEO_NAME FROM CEO WHERE ST_NR=?", (st_nr,))
+                                cur.execute("SELECT 1 FROM CEO WHERE ST_NR=? AND CEO_NAME=?", (st_nr, ceo_name))
                                 row = cur.fetchone()
                             except Exception as e:
                                 show_error(self, "Fehler beim Datenbankzugriff",
@@ -913,15 +924,7 @@ class MainWindow(QMainWindow):
                                 break
                             if row is None:
                                 ceo_inserts.append((st_nr, ceo_name))
-                            else:
-                                if row[0] != ceo_name:
-                                    show_error(
-                                        self,
-                                        "Fehler",
-                                        f"Die Steuernummer {st_nr} ist bereits für {row[0]} vergeben!\nBitte geben Sie eine andere Steuernummer für {ceo_name} an."
-                                    )
-                                    conflict = True
-                                    break
+
                             try:
                                 cur.execute(
                                     "SELECT COUNT(*) FROM REF_LABOR_COST WHERE FK_ST_NR=? AND FK_UST_IDNR=?",
@@ -948,7 +951,7 @@ class MainWindow(QMainWindow):
                                 )
                         except Exception as e:
                             print("Fehler beim Speichern",
-                                       f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
+                                  f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
                             return
 
                         break
@@ -1102,8 +1105,7 @@ class MainWindow(QMainWindow):
         if current_tab == "tab_dienstleister":
             tel = data_map.get("tv_dienstleister_Telefonnummer", "")
             mobil = data_map.get("tv_dienstleister_Mobiltelefonnummer", "")
-            print(tel + mobil)
-            if (not tel or not tel.strip()) and (not mobil or not mobil.strip()):
+            if tel is None and mobil is None:
                 errors.append("Mindestens eine Telefonnummer oder Mobiltelefonnummer muss ausgefüllt werden.")
 
         return (len(errors) == 0), data_map, "\n".join(errors)
@@ -1753,8 +1755,6 @@ class MainWindow(QMainWindow):
                 self.logo_data = f.read()
             mime_type, _ = mimetypes.guess_type(file_path)
             self.mime_type = mime_type
-            print("Bild gewählt:", self.file_name)
-            print("MIME-Type:", self.mime_type)
 
             # === Logo-Vorschau ins Label laden ===
             label = self.findChild(QLabel, "lbl_dienstleister_logo")

@@ -1323,7 +1323,7 @@
         </widget>
         <widget class="QWidget" name="tab_positionen">
          <attribute name="title">
-          <string>Positionen</string>
+          <string>Produkte</string>
          </attribute>
          <layout class="QHBoxLayout" name="layoutTabPositionenMain">
           <item>

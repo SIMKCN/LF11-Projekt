@@ -9,7 +9,6 @@ from functools import partial
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
-import pyzipper
 import os
 
 # IMPORT PyQt6 Packages
@@ -29,10 +28,16 @@ from validation import *
 from config import UI_PATH, DB_PATH, POSITION_DIALOG_PATH, DEBOUNCE_TIME, CACHE_OUTPUT_PATH, IS_AUTHORIZATION_ACTIVE, \
     MIN_LENGTH_EXPORT
 from auth.user_management_dialog import UserManagementDialog
-from utils import show_error, format_exception, show_info, has_right
+from utils import show_error, format_exception, show_info, get_max_permission
 from logic import get_service_provider_ceos
 
 from pdfCreation import InvoicePDFBuilder
+
+
+class InfoDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        uic.loadUi("Qt/info_dialog.ui", self)
 
 class PasswordDialog(QDialog):
     def __init__(self, min_length=MIN_LENGTH_EXPORT, parent=None):
@@ -290,6 +295,11 @@ class MainWindow(QMainWindow):
         if self.btn_nutzer_verwalten:
             self.btn_nutzer_verwalten.clicked.connect(self.open_user_management)
 
+        # Connect Signal for Click on 'btn_nutzer_verwalten'
+        self.btn_info = self.findChild(QPushButton, "btn_info")
+        if self.btn_info:
+            self.btn_info.clicked.connect(self.show_info_dialog)
+
         # Set DEBOUNCE Timer for every search field
         self.search_timer = QTimer(self)
         self.search_timer.setSingleShot(True)
@@ -329,19 +339,19 @@ class MainWindow(QMainWindow):
         self.btn_eintrag_loeschen.setEnabled(False)
 
         # RECHTEPRÜFUNG
-        if has_right(self, self.current_user_id, 'read'):
+        if get_max_permission(self.current_user_id) >= 1:
             self.tb_search_entries.setEnabled(True)
             self.btn_rechnung_exportieren.setEnabled(True)
             self.btn_drucken.setEnabled(True)
 
-        if has_right(self, self.current_user_id, 'write'):
+        if get_max_permission(self.current_user_id) >= 2:
             self.btn_eintrag_hinzufuegen.setEnabled(True)
             self.btn_eintrag_speichern.setEnabled(True)
 
-        if has_right(self, self.current_user_id, 'delete'):
+        if get_max_permission(self.current_user_id) >= 3:
             self.btn_eintrag_loeschen.setEnabled(True)
 
-        if has_right(self, self.current_user_id, 'admin'):
+        if get_max_permission(self.current_user_id) >= 100:
             self.btn_nutzer_verwalten.setEnabled(True)
 
 
@@ -361,7 +371,7 @@ class MainWindow(QMainWindow):
 
     # Loads data into a QTableView from a database view.
     def load_table(self, table_view: QTableView, db_view: str):
-        if not has_right(self, self.current_user_id, 'read'):
+        if not get_max_permission(self.current_user_id) >= 1:
             table_view.setModel(QStandardItemModel())
             return
 
@@ -408,6 +418,7 @@ class MainWindow(QMainWindow):
             self.temp_positionen = []
             self.load_all_and_temp_positions_for_rechnungsformular()
             self.findChild(QLabel, "lbl_dienstleister_logo").clear()
+            self.btn_logo_upload.setEnabled(True)
             form_field_types = (QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit, QTextBrowser)
             for field in self.findChildren(form_field_types):
                 if field.isVisible():
@@ -473,11 +484,10 @@ class MainWindow(QMainWindow):
             if table_view.objectName() == "tv_dienstleister":
                 ust_idnr = current.sibling(current.row(), 0).data()
                 ceo_widget = self.findChild(QLineEdit, "tv_dienstleister_CEOS")
+                self.btn_logo_upload.setDisabled(True)
                 if ceo_widget:
                     ceo_names = []
                     try:
-                        import sqlite3
-                        from config import DB_PATH
                         with sqlite3.connect(DB_PATH) as conn:
                             cur = conn.cursor()
                             cur.execute("""
@@ -618,7 +628,7 @@ class MainWindow(QMainWindow):
 
     # Saves and commits the data from form current form into DB
     def on_save_entry(self):
-        if not has_right(self, self.current_user_id, 'write'):
+        if not get_max_permission(self.current_user_id) >= 2:
             return
 
         current_tab = self.tabWidget.currentWidget().objectName()
@@ -807,7 +817,6 @@ class MainWindow(QMainWindow):
 
                 elif current_tab == "tab_dienstleister":
                     address_data = rel_data.get("addresses", {})
-
                     cur.execute(
                         "INSERT INTO ADDRESSES (STREET, NUMBER, CITY, ZIP, COUNTRY, CREATION_DATE) VALUES (?, ?, ?, ?, ?, ?)",
                         (
@@ -820,7 +829,6 @@ class MainWindow(QMainWindow):
                         )
                     )
                     address_id = cur.lastrowid
-
                     logo_id = None
                     if (getattr(self, "file_name", None) and getattr(self, "logo_data", None) and len(
                             self.logo_data) > 0):
@@ -837,7 +845,6 @@ class MainWindow(QMainWindow):
                             )
                         )
                         logo_id = cur.lastrowid
-
                     cur.execute(
                         "INSERT INTO SERVICE_PROVIDER (UST_IDNR, MOBILTELNR, PROVIDER_NAME, FAXNR, WEBSITE, EMAIL, TELNR, CREATION_DATE, FK_ADDRESS_ID, FK_LOGO_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
@@ -853,7 +860,6 @@ class MainWindow(QMainWindow):
                             logo_id
                         )
                     )
-
                     bank_data = rel_data.get("accounts", {})
                     bic = bank_data.get("tv_dienstleister_BIC", "")
                     bank_name = bank_data.get("tv_dienstleister_Kreditinstitut", "")
@@ -867,9 +873,24 @@ class MainWindow(QMainWindow):
                             "INSERT INTO ACCOUNT (IBAN, FK_BANK_ID, FK_UST_IDNR) VALUES (?, ?, ?)",
                             (iban, bic, main_data.get("tv_dienstleister_UStIdNr", ""))
                         )
-
                     ceo_names_text = main_data.get("tv_dienstleister_CEOS", "")
                     ceo_names = [n.strip() for n in ceo_names_text.split(",") if n.strip()]
+
+                    # Prüfe auf doppelte Namen
+                    unique_names = set()
+                    duplicate_names = set()
+                    for name in ceo_names:
+                        if name in unique_names:
+                            duplicate_names.add(name)
+                        else:
+                            unique_names.add(name)
+
+                    if duplicate_names:
+                        # Es gibt doppelte Namen, nur EIN Dialog für den jeweiligen Namen anzeigen
+                        show_error(self, "Fehler",
+                                   f"HALLO ???!! Bist du dumm? Was gibst du zweimal den selben Namen ein? \n"
+                                   f"Verfatz dich!")
+                        ceo_names = list(unique_names)
 
                     while ceo_names:
                         ceo_dlg = CEOStNrDialog(ceo_names, self)
@@ -894,7 +915,7 @@ class MainWindow(QMainWindow):
                                 break
                             used_steuernrs.add(st_nr)
                             try:
-                                cur.execute("SELECT CEO_NAME FROM CEO WHERE ST_NR=?", (st_nr,))
+                                cur.execute("SELECT 1 FROM CEO WHERE ST_NR=? AND CEO_NAME=?", (st_nr, ceo_name))
                                 row = cur.fetchone()
                             except Exception as e:
                                 show_error(self, "Fehler beim Datenbankzugriff",
@@ -903,15 +924,7 @@ class MainWindow(QMainWindow):
                                 break
                             if row is None:
                                 ceo_inserts.append((st_nr, ceo_name))
-                            else:
-                                if row[0] != ceo_name:
-                                    show_error(
-                                        self,
-                                        "Fehler",
-                                        f"Die Steuernummer {st_nr} ist bereits für {row[0]} vergeben!\nBitte geben Sie eine andere Steuernummer für {ceo_name} an."
-                                    )
-                                    conflict = True
-                                    break
+
                             try:
                                 cur.execute(
                                     "SELECT COUNT(*) FROM REF_LABOR_COST WHERE FK_ST_NR=? AND FK_UST_IDNR=?",
@@ -938,7 +951,7 @@ class MainWindow(QMainWindow):
                                 )
                         except Exception as e:
                             print("Fehler beim Speichern",
-                                       f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
+                                  f"Beim Speichern der CEO-Daten ist ein Fehler aufgetreten: {e}")
                             return
 
                         break
@@ -1022,21 +1035,27 @@ class MainWindow(QMainWindow):
                     if value and not validate_email(value):
                         errors.append("Ungültige E-Mail-Adresse.")
                 elif field_name == "tv_dienstleister_Telefonnummer":
-                    # Telefonnummer oder Mobiltelefonnummer muss ausgefüllt sein, Prüfung später
-                    pass
+                    # Wert immer speichern
+                    data_map[field_name] = value
+                    continue  # Prüfung später zentral
                 elif field_name == "tv_dienstleister_Mobiltelefonnummer":
-                    pass
+                    # Wert immer speichern
+                    data_map[field_name] = value
+                    continue  # Prüfung später zentral
                 elif field_name == "tv_dienstleister_BIC":
                     if value and not validate_bic(value):
                         errors.append("BIC darf maximal 12 Zeichen lang sein.")
                 elif field_name == "tv_dienstleister_IBAN":
                     if value and not validate_iban(value):
                         errors.append("IBAN darf maximal 22 Zeichen lang sein.")
+                elif field_name == "tv_dienstleister_Faxnummer":
+                    if value:
+                        if not validate_telefonnummer(value):
+                            errors.append("Faxnummer ist ungültig.")
                 elif field_name in ["tv_dienstleister_Strasse", "tv_dienstleister_Stadt", "tv_dienstleister_Land",
                                     "tv_dienstleister_Unternehmensname"]:
                     if not value:
                         errors.append(f"{field_name.replace('tv_dienstleister_', '')} darf nicht leer sein.")
-                # Faxnummer, Website, Logo: optional, kein Fehler
                 else:
                     if not value and field_name not in ["tv_dienstleister_Faxnummer", "tv_dienstleister_Webseite",
                                                         "tv_dienstleister_Logo"]:
@@ -1068,7 +1087,6 @@ class MainWindow(QMainWindow):
                     if value and not validate_mwst(value):
                         errors.append("MwSt. muss zwischen 0 und 100 liegen.")
                 elif field_name == "dsb_lohnkosten":
-                    # muss nur ausgefüllt sein, wenn >0
                     try:
                         if value and float(value) > 0 and not value:
                             errors.append("Lohnkosten müssen ausgefüllt werden, wenn sie größer als 0 sind.")
@@ -1079,16 +1097,15 @@ class MainWindow(QMainWindow):
                         errors.append(f"{field_name} darf nicht leer sein.")
                 data_map[field_name] = value
             else:
-                # Default: nur Pflichtfeldprüfung
                 if not value:
                     errors.append(f"{field_name} darf nicht leer sein.")
                 data_map[field_name] = value
 
-        # Spezialregel: Telefonnummer/Mobiltelefonnummer bei Dienstleister
+        # Spezialregel: Telefonnummer ODER Mobiltelefonnummer muss vorhanden sein, aber beide dürfen auch ausgefüllt sein
         if current_tab == "tab_dienstleister":
             tel = data_map.get("tv_dienstleister_Telefonnummer", "")
             mobil = data_map.get("tv_dienstleister_Mobiltelefonnummer", "")
-            if not tel and not mobil:
+            if tel is None and mobil is None:
                 errors.append("Mindestens eine Telefonnummer oder Mobiltelefonnummer muss ausgefüllt werden.")
 
         return (len(errors) == 0), data_map, "\n".join(errors)
@@ -1533,7 +1550,7 @@ class MainWindow(QMainWindow):
 
     def update_export_button_state(self, index):
         current_tab = self.tabWidget.widget(index)
-        if not has_right(self, self.current_user_id, 'read'):
+        if not get_max_permission(self.current_user_id) >= 1:
             return
         if not self.btn_rechnung_exportieren or not self.btn_drucken:
             return
@@ -1738,8 +1755,6 @@ class MainWindow(QMainWindow):
                 self.logo_data = f.read()
             mime_type, _ = mimetypes.guess_type(file_path)
             self.mime_type = mime_type
-            print("Bild gewählt:", self.file_name)
-            print("MIME-Type:", self.mime_type)
 
             # === Logo-Vorschau ins Label laden ===
             label = self.findChild(QLabel, "lbl_dienstleister_logo")
@@ -1988,7 +2003,7 @@ class MainWindow(QMainWindow):
     def open_user_management(self):
         # Rechteprüfung nur, wenn aktiviert
         if IS_AUTHORIZATION_ACTIVE:
-            if not has_right(self, self.current_user_id, 'admin'):
+            if not get_max_permission(self.current_user_id) >= 100:
                 return
         dialog = UserManagementDialog(self)
         dialog.exec()
@@ -2005,7 +2020,13 @@ class MainWindow(QMainWindow):
         sel_model.currentChanged.connect(partial(self.on_row_selected, db_view=db_view, table_view=table_view))
 
     def on_eintrag_hinzufuegen_clicked(self):
-        if not has_right(self, self.current_user_id, 'write'):
+        if not get_max_permission(self.current_user_id) >= 2:
             self.w_rechnung_hinzufuegen.setVisible(False)
             return
         self.clear_and_enable_form_fields()
+        self.dsb_mwst_lohnkosten.setValue(float(config.DEFAULT_MWST))
+        self.dsb_mwst_positionen.setValue(float(config.DEFAULT_MWST))
+
+    def show_info_dialog(self):
+        dlg = InfoDialog(self)
+        dlg.exec()

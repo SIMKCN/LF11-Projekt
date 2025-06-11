@@ -1,10 +1,9 @@
 # This file contains utility functions for the application
-
+import sqlite3
 import traceback
-from PyQt6.QtWidgets import QMessageBox
 
-from auth.user_management import user_has_permission
-from config import IS_AUTHORIZATION_ACTIVE
+from PyQt6.QtWidgets import QMessageBox
+from config import DB_PATH, IS_AUTHORIZATION_ACTIVE
 
 
 def show_error(parent, title, message):
@@ -28,22 +27,25 @@ def show_info(parent, title, message):
     """
     QMessageBox.information(parent, title, message)
 
-def has_right(parent, user_id, permission_name):
+
+def get_max_permission(user_id):
     """
-    Prüft, ob der Nutzer die gewünschte Berechtigung (z.B. 'read', 'write', 'delete') hat.
-    Gibt True zurück, wenn IS_AUTHORIZATION_ACTIVE ausgeschaltet ist.
-    Zeigt ggf. Fehlermeldung an.
+    Gibt die höchste PERMISSION_ID des Nutzers zurück.
+    Wenn IS_AUTHORIZATION_ACTIVE False ist, wird immer die maximal mögliche Rechte-ID (z.B. 9999) zurückgegeben.
+    Falls der Nutzer keine Rechte hat, wird 0 zurückgegeben.
     """
     if not IS_AUTHORIZATION_ACTIVE:
-        return True
-    if user_id is None:
-        if parent is not None:
-            QMessageBox.critical(parent, "Fehler", "Benutzerkennung nicht gesetzt!")
-        return False
-    try:
-        allowed = user_has_permission(user_id, permission_name)
-        return allowed
-    except Exception as e:
-        if parent is not None:
-            QMessageBox.critical(parent, "Fehler bei Rechteprüfung", str(e))
-        return False
+        return 9999
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT MAX(PERMISSION_ID)
+            FROM REF_USER_PERMISSIONS
+            WHERE USER_ID = ?
+        """, (user_id,))
+        row = cur.fetchone()
+        if row and row[0] is not None:
+            return int(row[0])
+        else:
+            return 0

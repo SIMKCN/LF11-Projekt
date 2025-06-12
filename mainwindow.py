@@ -2,6 +2,8 @@
 import mimetypes
 import sqlite3
 import subprocess
+import webbrowser
+import pathlib
 from datetime import date
 import sys
 from functools import partial
@@ -1981,7 +1983,21 @@ class MainWindow(QMainWindow):
         ]
         return export_data
 
-    def on_drucken_clicked(self):
+    def on_drucken_clicked(self, pdf_path: str):
+        """
+        Opens a PDF on Windows, prioritizing Adobe Acrobat/Reader.
+
+        It first searches for a standard Adobe installation. If found, it opens
+        the PDF with it. If not found, it falls back to opening the PDF in the
+        default web browser.
+
+        Args:
+            pdf_path (str): The full path to the PDF file.
+        
+        Returns:
+            bool: True if an open command was successfully issued, False otherwise.
+        """
+        # Ensure the file exists before proceeding
         try:
             idx = self.tv_rechnungen.currentIndex()
             if not idx.isValid():
@@ -1994,10 +2010,44 @@ class MainWindow(QMainWindow):
             if not os.path.exists(pdf_path):
                 self.create_and_show_invoice_pdf(invoice_nr)
                 print("Pfad exisitert nicht")
-
-            os.startfile(pdf_path, 'open')
         except Exception as e:
-            show_error(self, "Fehler beim Drucken", str(e))
+            show_error(self, "Fehler beim Finden des PDFs", str(e))
+
+        # --- 1. Try to open with Adobe Acrobat/Reader first ---
+        print("Searching for Adobe Acrobat/Reader...")
+        
+        # List of common paths for Adobe executables on Windows
+        acrobat_paths = [
+            r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+            r"C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+            r"C:\Program Files\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe",
+            r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe"
+        ]
+
+        # Find the first existing Adobe executable from the list
+        acrobat_executable = next((path for path in acrobat_paths if os.path.exists(path)), None)
+
+        if acrobat_executable:
+            try:
+                print(f"Adobe found at '{acrobat_executable}'. Opening file...")
+                # Use subprocess.Popen for a non-blocking call
+                subprocess.Popen([acrobat_executable, pdf_path])
+                return True
+            except Exception as e:
+                print(f"Error opening with Adobe: {e}")
+                # If Adobe fails, we can proceed to the browser fallback
+                print("Could not open with Adobe, will try the web browser.")
+
+        # --- 2. Fallback to Web Browser ---
+        print("Adobe not found or failed to open. Opening in default web browser...")
+        try:
+            # Get the absolute path and format it as a file URI for browser compatibility
+            file_uri = pathlib.Path(os.path.abspath(pdf_path)).as_uri()
+            webbrowser.open(file_uri)
+            return True
+        except Exception as e:
+            print(f"An error occurred while trying to open the PDF in a browser: {e}")
+            return False
 
     def open_user_management(self):
         # Rechteprüfung nur, wenn aktiviert

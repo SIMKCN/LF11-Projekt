@@ -2,7 +2,7 @@
 import os
 
 APPDATA_PATH = os.environ.get('APPDATA')
-DB_PATH = APPDATA_PATH/"Rechnungsverwaltung"/"data"/"rechnungsverwaltung.db"
+DB_PATH = APPDATA_PATH+"/Rechnungsverwaltung/rechnungsverwaltung.db"
 UI_PATH = "Qt/main.ui"
 POSITION_DIALOG_PATH = "./Qt/position_dialog.ui"
 DEBOUNCE_TIME=300

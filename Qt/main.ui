@@ -346,7 +346,7 @@
                      </sizepolicy>
                     </property>
                     <property name="text">
-                     <string>Lohnkosten</string>
+                     <string>Lohnkosten (Netto)</string>
                     </property>
                    </widget>
                   </item>

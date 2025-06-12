@@ -888,8 +888,7 @@ class MainWindow(QMainWindow):
                     if duplicate_names:
                         # Es gibt doppelte Namen, nur EIN Dialog für den jeweiligen Namen anzeigen
                         show_error(self, "Fehler",
-                                   f"HALLO ???!! Bist du dumm? Was gibst du zweimal den selben Namen ein? \n"
-                                   f"Verfatz dich!")
+                                   f"Es kann nicht zweimal der selbe Geschäftsführer gespeichert werden.")
                         ceo_names = list(unique_names)
 
                     while ceo_names:

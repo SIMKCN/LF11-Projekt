@@ -100,3 +100,4 @@ def get_user_id_by_username(username):
         if row:
             return row[0]
         return None
+    conn.close()

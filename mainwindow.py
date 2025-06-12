@@ -501,6 +501,8 @@ class MainWindow(QMainWindow):
                             ceo_names = [row[0] for row in cur.fetchall()]
                     except Exception as e:
                         ceo_names = []
+                    finally:
+                        conn.close()
                     ceo_widget.setText(", ".join(ceo_names))
                     ceo_widget.setEnabled(False)
 
@@ -981,6 +983,8 @@ class MainWindow(QMainWindow):
             import traceback
             print(traceback.format_exc())
             show_error(self, "Speicherfehler", str(e))
+        finally:
+            conn.close()
 
     # Validates collected data before commiting into DB
     def validate_and_collect_fields(self, field_names, current_tab):
@@ -1200,6 +1204,8 @@ class MainWindow(QMainWindow):
                 ceo_names = [row[0] for row in cur.fetchall()]
         except Exception as e:
             show_error(self, "Fehler", f"Geschäftsführer konnten nicht geladen werden: {e}")
+        finally:
+            conn.close()
 
         # Feld befüllen und deaktivieren
         self.tv_dienstleister_CEOS.setText(", ".join(ceo_names))
@@ -1411,6 +1417,8 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             show_error(self, "Löschfehler", str(e))
+        finally:
+            conn.close()
 
     def refresh_tab_table_views(self):
         """
@@ -1663,6 +1671,8 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             show_error(self, "Export-Fehler", str(e))
+        finally:
+            conn.close()
 
     def on_search_kunden_text_changed(self, text):
         self.search_timer_kunden.stop()
@@ -1812,6 +1822,7 @@ class MainWindow(QMainWindow):
                     label.setScaledContents(False)
                 else:
                     label.clear()
+        conn.close()
 
     def build_invoice_xml(self, export_data):
         root = ET.Element("invoice_data")
@@ -1885,7 +1896,7 @@ class MainWindow(QMainWindow):
                 result = cursor.fetchone()
                 if result and result[0] is not None:
                     logo_bytes = result[0]
-
+        conn.close()
         pdf_path = os.path.join(CACHE_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
         builder = InvoicePDFBuilder(xml_string, logo_bytes)
         builder.build(pdf_path)
@@ -1896,6 +1907,7 @@ class MainWindow(QMainWindow):
             cur = conn.cursor()
             cur.execute("SELECT INVOICE_NR FROM INVOICES")
             all_invoices = [row[0] for row in cur.fetchall()]
+        conn.close()
         missing = []
         for invoice_nr in all_invoices:
             pdf_path = os.path.join(CACHE_OUTPUT_PATH, f"rechnung_{invoice_nr}.pdf")
@@ -1972,7 +1984,7 @@ class MainWindow(QMainWindow):
             """, (invoice_nr,))
             accounts_rows = cur.fetchall()
             accounts_columns = [desc[0] for desc in cur.description]
-
+        conn.close()
         export_data = [
             {"invoice": dict(zip(invoice_columns, invoice_row)) if invoice_row else {}},
             {"customer": dict(zip(customer_columns, customer_row)) if customer_row else {}},

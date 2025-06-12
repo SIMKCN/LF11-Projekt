@@ -21,6 +21,7 @@ def fetch_all(query, params=None):
         cursor = conn.cursor()
         cursor.execute(query, params or ())
         data = cursor.fetchall()
+        conn.close()
         columns = [description[0] for description in cursor.description]
     return data, columns
 

@@ -49,3 +49,4 @@ def get_max_permission(user_id):
             return int(row[0])
         else:
             return 0
+    conn.close()

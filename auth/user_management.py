@@ -5,19 +5,17 @@ from config import DB_PATH
 
 
 def get_users_with_permissions():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        SELECT USERS.ID, USERS.USERNAME, GROUP_CONCAT(PERMISSIONS.APP_PERM)
-        FROM USERS
-        LEFT JOIN REF_USER_PERMISSIONS ON USERS.ID = REF_USER_PERMISSIONS.USER_ID
-        LEFT JOIN PERMISSIONS ON REF_USER_PERMISSIONS.PERMISSION_ID = PERMISSIONS.ID
-        GROUP BY USERS.ID, USERS.USERNAME
-        ORDER BY USERS.ID
-    ''')
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('''
+            SELECT USERS.ID, USERS.USERNAME, GROUP_CONCAT(PERMISSIONS.APP_PERM)
+            FROM USERS
+            LEFT JOIN REF_USER_PERMISSIONS ON USERS.ID = REF_USER_PERMISSIONS.USER_ID
+            LEFT JOIN PERMISSIONS ON REF_USER_PERMISSIONS.PERMISSION_ID = PERMISSIONS.ID
+            GROUP BY USERS.ID, USERS.USERNAME
+            ORDER BY USERS.ID
+        ''')
+        return c.fetchall()
 
 def get_all_permissions():
     conn = sqlite3.connect(DB_PATH)
@@ -100,4 +98,3 @@ def get_user_id_by_username(username):
         if row:
             return row[0]
         return None
-    conn.close()

@@ -1,7 +1,8 @@
 # This file contains configuration values and constants
 import os
 
-DB_PATH = "data/rechnungsverwaltung.db"
+APPDATA_PATH = os.environ.get('APPDATA')
+DB_PATH = APPDATA_PATH/"Rechnungsverwaltung"/"data"/"rechnungsverwaltung.db"
 UI_PATH = "Qt/main.ui"
 POSITION_DIALOG_PATH = "./Qt/position_dialog.ui"
 DEBOUNCE_TIME=300

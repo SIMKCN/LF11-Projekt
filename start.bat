@@ -1,12 +1,8 @@
 @echo off
-
 title Rechnungsverwaltung Starter
 
-REM Setzt das aktuelle Verzeichnis als Basisverzeichnis und wechselt dorthin
 set "BASE_DIR=%~dp0"
 cd /d "%BASE_DIR%"
-
-REM Definiert eine Log-Datei fuer Fehler und leert sie beim Start
 set "LOG_FILE=%BASE_DIR%error_log.txt"
 echo. > "%LOG_FILE%"
 
@@ -15,13 +11,13 @@ echo  Rechnungsverwaltung - Starter
 echo =================================================================
 echo.
 
-REM --- Schritt 1: Pruefen, ob Python installiert ist ---
-echo [1/4] Pruefe auf Python-Installation...
+REM --- Schritt 1: Python Installation prüfen ---
+echo [1/4] Prüfe auf Python-Installation...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo   FEHLER: Python scheint nicht im System-PATH gefunden zu werden.
-    echo   Bitte installieren Sie Python und waehlen Sie 'Add Python to PATH' aus.
+    echo   Bitte installieren Sie Python und wählen Sie 'Add Python to PATH' aus.
     echo.
     echo   Download: https://www.python.org/downloads/
     echo.
@@ -29,25 +25,47 @@ if %errorlevel% neq 0 (
 )
 echo       ...Python gefunden.
 
-REM --- Schritt 2: Virtuelle Umgebung erstellen (Best Practice) ---
+REM --- Schritt 2: Virtuelle Umgebung erstellen/überprüfen ---
 echo.
-echo [2/4] Ueberpruefe virtuelle Umgebung...
-if exist "venv" goto venv_exists
+echo [2/4] Überprüfe virtuelle Umgebung...
+if exist "venv\Scripts\python.exe" goto venv_exists
 
-REM Dieser Code wird nur ausgefuehrt, wenn "venv" NICHT existiert.
-echo       ...Erstelle eine neue virtuelle Umgebung (venv). Dies kann einen Moment dauern.
+echo       ...Erstelle neue virtuelle Umgebung (venv)...
 python -m venv venv
 if %errorlevel% neq 0 (
     echo.
     echo ============================ FEHLER ============================
     echo Die Erstellung der virtuellen Umgebung ist fehlgeschlagen.
     echo.
-    echo Moegliche Gruende:
-    echo   - Keine Schreibrechte im aktuellen Ordner (als Administrator ausfuehren?).
-    echo   - Ein Antivirenprogramm blockiert den Prozess.
+    echo Mögliche Gründe:
+    echo   - Keine Schreibrechte im aktuellen Ordner
+    echo   - Antivirenprogramm blockiert den Prozess
+    echo   - Python-Installation beschädigt
     echo ================================================================
     echo.
     exit /b 2
+)
+
+REM Warte auf Existenz der Python-Executable
+echo       ...Warte auf Fertigstellung...
+set "VENV_READY=0"
+for /l %%i in (1,1,30) do (
+    if exist "venv\Scripts\python.exe" (
+        set "VENV_READY=1"
+        goto venv_created
+    )
+    timeout /t 1 /nobreak >nul
+)
+:venv_created
+
+if %VENV_READY% equ 0 (
+    echo.
+    echo ============================ FEHLER ============================
+    echo Virtuelle Umgebung wurde nicht vollständig erstellt.
+    echo Bitte überprüfen Sie den venv-Ordner manuell.
+    echo ================================================================
+    echo.
+    exit /b 4
 )
 echo       ...Virtuelle Umgebung erfolgreich erstellt.
 goto install_dependencies
@@ -56,9 +74,10 @@ goto install_dependencies
 echo       ...Virtuelle Umgebung 'venv' bereits vorhanden.
 
 :install_dependencies
-REM --- Schritt 3: Abhaengigkeiten installieren (direkter Aufruf) ---
+REM --- Schritt 3: Abhängigkeiten installieren ---
 echo.
-echo [3/4] Installiere/Ueberpruefe Bibliotheken (aus requirements.txt)...
+echo [3/4] Installiere/Überprüfe Bibliotheken...
+"venv\Scripts\python.exe" -m pip install --upgrade pip --quiet >nul 2>&1
 "venv\Scripts\python.exe" -m pip install -r requirements.txt --quiet > "%LOG_FILE%" 2>&1
 if %errorlevel% neq 0 (
     echo.
@@ -69,22 +88,11 @@ if %errorlevel% neq 0 (
 )
 echo       ...Alle Bibliotheken sind auf dem neuesten Stand.
 
-REM --- Schritt 4: Hauptprogramm starten (direkter Aufruf) ---
+REM --- Schritt 4: Hauptprogramm starten ---
 echo.
 echo [4/4] Starte die Rechnungsverwaltungs-Anwendung...
 echo.
-"venv\Scripts\python.exe" main.py >> "%LOG_FILE%" 2>&1
-if %errorlevel% neq 0 (
-    echo =================================================================
-    echo   FEHLER BEIM STARTEN DER ANWENDUNG!
-    echo =================================================================
-    echo.
-    echo   Das Python-Programm wurde unerwartet beendet.
-    echo   Eine genaue Fehlermeldung finden Sie in der Datei: %LOG_FILE%
-    echo.
-) else (
-    echo Die Anwendung wurde erfolgreich beendet.
-)
+start "" "%BASE_DIR%venv\Scripts\python.exe" "%BASE_DIR%main.py"
 
-echo Druecken Sie eine beliebige Taste, um das Fenster zu schliessen...
->nul
+echo Die Anwendung wurde gestartet. Sie können dieses Fenster schließen.
+timeout /t 5 >nul

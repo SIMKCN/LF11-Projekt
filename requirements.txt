@@ -1,4 +1,0 @@
-pyqt6
-reportlab
-pyzipper
-bcrypt
